@@ -1,4 +1,4 @@
-record_id,month,route_id,day_of_week,scheduled_departure_time,stop_sequence,stop_code,n_observations,mean_cumulative_travel_time_sec,std_cumulative_travel_time_sec,mean_cumulative_distance_m,std_cumulative_distance_m,route_name
+record_id,month,route_id,day_of_week,scheduled_departure_time,stop_sequence,stop_code,n_observations,mean_cumulative_travel_time_min,std_cumulative_travel_time_min,mean_cumulative_distance_m,std_cumulative_distance_m,route_name
 55233619,10,10802,5,23,26,4173,10,31.12,5.09,10802,0.0706241,19
 73219680,1,10802,4,11,25,3605,10,38.25,4.63,10802,0.0706241,19
 38013651,7,10802,2,13,25,3605,19,42.44,4.83,10802,0.0706241,19
