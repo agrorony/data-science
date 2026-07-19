@@ -1,0 +1,104 @@
+{
+  "22": {
+    "route_ids": [
+      5499,
+      5502
+    ],
+    "treatment": "direction_pair",
+    "direction_groups": {
+      "direction_A": [
+        5499
+      ],
+      "direction_B": [
+        5502
+      ]
+    },
+    "notes": "5499 (62,044 rows, 55 stops) vs 5502 (58,748 rows, 52 stops): near-zero stop-code overlap, similar volume (row_ratio 0.947) and route length (stops_ratio 0.945), both cover all 12 months concurrently. Textbook opposite-direction pair using direction-specific stop codes."
+  },
+  "19": {
+    "route_ids": [
+      10802,
+      10803,
+      10804,
+      10806,
+      10807
+    ],
+    "treatment": "direction_pair",
+    "direction_groups": {
+      "direction_A": [
+        10802,
+        10803
+      ],
+      "direction_B": [
+        10804,
+        10806,
+        10807
+      ]
+    },
+    "notes": "Full pairwise jaccard matrix shows a clean two-cluster split: {10802,10803} have exactly 0.0 stop-set overlap with every route_id in {10804,10806,10807}, while within each group overlap is positive (10802-10803: 0.907; 10804-10806: 0.222; 10804-10807: 0.324; 10806-10807: 0.414). This is two directions, not five unrelated route_ids. direction_A is anchored by 10802 (53,011 rows, 42 stops, dominant); 10803 (1,514 rows, 8 months) is a same-direction alternate/replacement id, 90.7% stop-overlap with 10802. direction_B is anchored by 10804 (48,870 rows, 37 stops); 10806 (348 rows) and 10807 (144 rows, only 12 stops) are sparser same-direction variants that skip many stops -- stage4's existing variant-detection logic (built to catch exactly this: stop-skipping variants of a reference sequence) will naturally classify them as minor/rare variants of direction_B rather than needing separate handling."
+  },
+  "17": {
+    "route_ids": [
+      10398,
+      10399
+    ],
+    "treatment": "direction_pair",
+    "direction_groups": {
+      "direction_A": [
+        10398
+      ],
+      "direction_B": [
+        10399
+      ]
+    },
+    "notes": "10398 (25,535 rows, 47 stops) vs 10399 (34,606 rows, 49 stops): near-zero stop overlap, row_ratio 0.738, stops_ratio 0.959, full-year overlap. Likely opposite-direction pair."
+  },
+  "9": {
+    "route_ids": [
+      11107,
+      11108
+    ],
+    "treatment": "direction_pair",
+    "direction_groups": {
+      "direction_A": [
+        11107
+      ],
+      "direction_B": [
+        11108
+      ]
+    },
+    "notes": "11107 (62,384 rows, 67 stops) vs 11108 (52,312 rows, 63 stops): jaccard 0.04, row_ratio 0.839, stops_ratio 0.940, full-year overlap. Likely opposite-direction pair."
+  },
+  "97": {
+    "route_ids": [
+      36950,
+      36951
+    ],
+    "treatment": "direction_pair",
+    "direction_groups": {
+      "direction_A": [
+        36950
+      ],
+      "direction_B": [
+        36951
+      ]
+    },
+    "notes": "36950 (35,847 rows, 30 stops) vs 36951 (41,403 rows, 34 stops): jaccard 0.049, row_ratio 0.866, stops_ratio 0.882, full-year overlap. Likely opposite-direction pair. Note: this is independent of the reported 2 separate blockage locations on this line -- that's a within-direction detour-variant question, handled later in stage5/stage8, not a route_id relationship."
+  },
+  "14": {
+    "route_ids": [
+      10179,
+      10180
+    ],
+    "treatment": "direction_pair",
+    "direction_groups": {
+      "direction_A": [
+        10179
+      ],
+      "direction_B": [
+        10180
+      ]
+    },
+    "notes": "10179 (34,138 rows, 40 stops) vs 10180 (34,921 rows, 35 stops): jaccard 0.056, row_ratio 0.978, stops_ratio 0.875, full-year overlap. Likely opposite-direction pair."
+  }
+}
