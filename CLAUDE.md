@@ -37,7 +37,10 @@ Always respond in English, regardless of the language used in the prompt.
 
 **Important professor note:** The instructor recommends focusing on "big" questions (e.g. "When is the best time to take this bus line?") rather than narrow statistical ones (e.g. "what is the correlation between X and Y?"). The exploratory analysis before focusing on a specific question should be a significant part of both the project and the final report.
 
-**Data source:** Israeli government open data — https://data.gov.il/dataset/
+**Data source (portal root):** Israeli government open data — https://data.gov.il/dataset/
+
+**Primary dataset (authoritative project source):**
+https://data.gov.il/he/datasets/ministry_of_transport/arrivaltostationdayandhours/e3673768-3dc2-4e62-b0ea-cf763c07a037
 
 ---
 
@@ -77,7 +80,16 @@ Each row represents the **average travel behavior** across all rides that matche
 
 ## Known Data Issues
 1. **Duplicate rows (~34% of data):** ~77,869 rows share the same (route_id, month, DayOfWeek, HourSourceTime, StopSequence_Rishui) but have different `count_common` values. This appears to result from overlapping data across the source files `ride_data1–4.csv`. **Must deduplicate before any analysis** — keep the row with the higher `count_common`.
-2. **Noise routes:** 99 route_ids exist but only 4 are meaningful. Filter to: `[5499, 10802, 37936, 10398]`.
+2. **Route scope update:** historical analyses used 4 core route_ids (`[5499, 10802, 37936, 10398]`).
+	Current target scope is line-to-route_id mapping:
+	- 15: `[37936]`
+	- 22: `[5499, 5502]`
+	- 19: `[10802, 10803, 10804, 10806, 10807]`
+	- 17: `[10398, 10399]`
+	- 9: `[11107, 11108]`
+	- 97: `[36950, 36951]`
+	- 14: `[10179, 10180]`
+	For any missing route_id in `govData/ride_data_merged.csv`, run preflight validation and complete manual download before final analysis.
 3. **Direction:** 3 of the 4 routes are single-direction; route 10398 is circular (no direction concept). There is no explicit direction column in the merged file.
 4. **Late-night hours:** HourSourceTime 25 and 26 represent 01:00 and 02:00 of the following day. Convert to 1 and 2 for display.
 5. **Saturday sparsity:** DayOfWeek=7 has ~8K rows vs ~40K on weekdays — low statistical power, treat with caution.

@@ -24,10 +24,19 @@ Set seaborn style to "whitegrid". Suppress warnings.
 3. Identify and count duplicate rows on: `(route_id, month, DayOfWeek, HourSourceTime, StopSequence_Rishui)`.
 4. Keep the row with the **higher** `count_common` for each duplicate group (use sort + drop_duplicates).
 5. Report the cleaned shape and how many rows were dropped.
-6. Filter to the 4 main routes: `[5499, 10802, 37936, 10398]`. Report how many rows remain per route.
-7. Add a boolean column `low_confidence` = True where `count_common < 8`.
-8. Add a column `hour_display`: convert HourSourceTime 25→1, 26→2, all others stay as-is.
-9. Add a column `day_label`: map DayOfWeek 1→"Sun", 2→"Mon", 3→"Tue", 4→"Wed", 5→"Thu", 6→"Fri", 7→"Sat".
+6. Filter to the project target route_id scope:
+   - 15: `[37936]`
+   - 22: `[5499, 5502]`
+   - 19: `[10802, 10803, 10804, 10806, 10807]`
+   - 17: `[10398, 10399]`
+   - 9: `[11107, 11108]`
+   - 97: `[36950, 36951]`
+   - 14: `[10179, 10180]`
+   Report how many rows remain per route_id and per line group.
+7. Before continuing analysis, run a preflight route-id coverage check and report any requested route_ids missing from `govData/ride_data_merged.csv`.
+8. Add a boolean column `low_confidence` = True where `count_common < 8`.
+9. Add a column `hour_display`: convert HourSourceTime 25→1, 26→2, all others stay as-is.
+10. Add a column `day_label`: map DayOfWeek 1→"Sun", 2→"Mon", 3→"Tue", 4→"Wed", 5→"Thu", 6→"Fri", 7→"Sat".
 
 Write a markdown cell summarising the key findings from this step.
 
