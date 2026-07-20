@@ -1,6 +1,6 @@
 """Orchestrator for the bus-transit data pipeline.
 
-Runs stage1 (coverage validation) through stage9 (control comparison).
+Runs stage0 (optional, --rebuild-merged) through stage10.
 Halts automatically after stage3 if govData/route_id_decisions.json is
 incomplete (see stage3_investigate_route_ids.py) -- stage4 onward needs a
 confirmed 'treatment' for every multi-route_id line first.
@@ -10,19 +10,21 @@ has unconfirmed rows when stage6 runs -- see stage5_variant_classification.py
 for the agent/human review step that produces that file.
 
 Stage0 (rebuilding govData/ride_data_merged.csv from the raw government
-source) is intentionally NOT run automatically: it depends on a large
-external file outside the repo and is meant to be run manually via the
-existing repo_root/rebuild_ride_data_merged.py when a new raw export is
-available. This orchestrator assumes ride_data_merged.csv already exists.
+source, see stage0_rebuild_merged.py) is opt-in via --rebuild-merged: it
+reads an 85M+ row external file outside the repo and is slow, so it's
+skipped by default (the orchestrator otherwise assumes
+govData/ride_data_merged.csv already exists and is current).
 """
 
 from __future__ import annotations
 
-import subprocess
+import argparse
 import sys
 
 from pipeline import (
     config,
+    stage0_rebuild_merged,
+    stage1_validate_coverage,
     stage2_rename_and_tag,
     stage3_investigate_route_ids,
     stage4_route_variants,
@@ -34,22 +36,20 @@ from pipeline import (
     stage10_route_deviation_heatmaps,
 )
 
-REPO_ROOT = config.REPO_ROOT
-
-
 def _header(label: str) -> None:
     print("=" * 60)
     print(label)
     print("=" * 60)
 
 
+def run_stage0_rebuild_merged() -> None:
+    _header("Stage 0: rebuild ride_data_merged.csv from raw source (majority-vote dedup)")
+    stage0_rebuild_merged.run()
+
+
 def run_stage1_validate_coverage() -> None:
-    _header("Stage 1: validate route_id coverage (repo_root/validate_target_routes.py)")
-    subprocess.run(
-        [sys.executable, str(REPO_ROOT / "validate_target_routes.py")],
-        cwd=REPO_ROOT,
-        check=True,
-    )
+    _header("Stage 1: validate route_id coverage")
+    stage1_validate_coverage.run()
 
 
 def run_stage2_rename_and_tag() -> None:
@@ -98,10 +98,20 @@ def run_stage10_route_deviation_heatmaps() -> None:
 
 
 def main() -> None:
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--rebuild-merged", action="store_true",
+        help="Run stage0 first: rebuild govData/ride_data_merged.csv from the raw source file.",
+    )
+    args = parser.parse_args()
+
+    if args.rebuild_merged:
+        run_stage0_rebuild_merged()
+
     if not config.RIDE_DATA_MERGED_PATH.exists():
         raise FileNotFoundError(
-            f"{config.RIDE_DATA_MERGED_PATH} does not exist. Run "
-            "repo_root/rebuild_ride_data_merged.py manually first (stage 0)."
+            f"{config.RIDE_DATA_MERGED_PATH} does not exist. Rerun with "
+            "--rebuild-merged, or place it manually first."
         )
 
     run_stage1_validate_coverage()

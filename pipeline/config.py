@@ -18,6 +18,11 @@ FIGURES_DIR = RONY_DIR / "figures"
 
 TARGET_ROUTE_IDS_PATH = GOV_DATA_DIR / "target_route_ids.json"
 
+# Raw government export (large, pipe-delimited, lives outside the repo).
+# Used only by stage0_rebuild_merged.py.
+RAW_SOURCE_PATH = Path(r"C:\Users\ronys\Downloads\e3673768-3dc2-4e62-b0ea-cf763c07a037(3).csv")
+STAGE0_DEDUP_AUDIT_PATH = GOV_DATA_DIR / "stage0_dedup_audit.csv"
+
 RIDE_DATA_MERGED_PATH = GOV_DATA_DIR / "ride_data_merged.csv"
 RENAMED_RIDE_DATA_PATH = GOV_DATA_DIR / "renamed_ride_data.csv"
 
