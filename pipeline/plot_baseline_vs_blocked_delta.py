@@ -29,21 +29,30 @@ THIN_THRESHOLD = 8  # fewer than this many blocked blocks at an hour -> shaded a
 
 
 def hour_medians(endpoints: pd.DataFrame) -> tuple[pd.Series, pd.Series]:
-    """Return (median end-to-end time by hour_display, n blocks by hour_display)."""
-    e = endpoints.copy()
-    e["hour_display"] = e["scheduled_departure_time"].replace({25: 1, 26: 2})
+    """Return (median end-to-end time by hour, n blocks by hour). Hours
+    25/26 (01:00/02:00 next day) are dropped entirely -- revision round 2
+    global rule, see pooled_analysis.drop_late_night_hours."""
+    e = pa.drop_late_night_hours(endpoints)
+    e["hour_display"] = e["scheduled_departure_time"]
     med = e.groupby("hour_display")["end_time_min"].median()
     n = e.groupby("hour_display")["end_time_min"].size()
     return med, n
 
 
-def plot_line_delta(line, baseline_ep: pd.DataFrame, blocked_ep: pd.DataFrame, out_path) -> dict:
+def compute_delta(baseline_ep: pd.DataFrame, blocked_ep: pd.DataFrame) -> tuple[pd.Series, list, pd.Series]:
+    """Return (delta by hour, thin hours, blocked n by hour) -- shared by
+    the per-line figure and the cross-line combined figure (section B)."""
     base_med, base_n = hour_medians(baseline_ep)
     blocked_med, blocked_n = hour_medians(blocked_ep)
 
     hours = sorted(set(base_med.index) & set(blocked_med.index))
     delta = pd.Series({h: blocked_med[h] - base_med[h] for h in hours}).sort_index()
     thin_hours = [h for h in hours if blocked_n.get(h, 0) < THIN_THRESHOLD]
+    return delta, thin_hours, blocked_n
+
+
+def plot_line_delta(line, baseline_ep: pd.DataFrame, blocked_ep: pd.DataFrame, out_path) -> dict:
+    delta, thin_hours, blocked_n = compute_delta(baseline_ep, blocked_ep)
 
     fig, ax = plt.subplots(figsize=(10, 5.5))
 
@@ -54,7 +63,7 @@ def plot_line_delta(line, baseline_ep: pd.DataFrame, blocked_ep: pd.DataFrame, o
 
     ax.plot(delta.index, delta.values, color="#d62728", linewidth=2.5, marker="o", markersize=5, label="Blocked variant minus baseline")
     ax.axhline(0, color="black", linewidth=1, linestyle="--", alpha=0.6)
-    ax.set_xlabel("Hour of day (25/26 shown as 01:00/02:00 next day)")
+    ax.set_xlabel("Hour of day")
     ax.set_ylabel("Extra travel time on blocked/special variant (min)")
     ax.set_title(f"Line {line}: Baseline vs. Blocked/Special Variant -- Travel-Time Delta by Hour", fontsize=12, fontweight="bold")
     ax.legend(fontsize=9)
@@ -81,8 +90,49 @@ def plot_line_delta(line, baseline_ep: pd.DataFrame, blocked_ep: pd.DataFrame, o
         "n_blocked": len(blocked_ep),
         "overall_median_delta_min": round(overall_delta, 1),
         "n_hours_thin": len(thin_hours),
-        "n_hours_total": len(hours),
+        "n_hours_total": len(delta),
     }
+
+
+CROSS_LINE_ORDER = [17, 19, 22, 9, 97]
+CROSS_LINE_COLORS = {17: "#b30000", 19: "#e34a33", 22: "#fc8d59", 9: "#54278f", 97: "#9e9ac8"}
+
+
+def plot_all_lines_delta(line_deltas: dict[int, pd.Series], out_path) -> None:
+    """Section B -- one combined figure: per-hour travel-time delta of the
+    blocked variant vs. the baseline ride, one curve per line, lines
+    17/19/22 in reds and 9/97 in purples, shared axes."""
+    fig, ax = plt.subplots(figsize=(11, 6))
+
+    for line in CROSS_LINE_ORDER:
+        delta = line_deltas.get(line)
+        if delta is None or delta.empty:
+            continue
+        ax.plot(
+            delta.index, delta.values, color=CROSS_LINE_COLORS[line],
+            linewidth=2.2, marker="o", markersize=4.5, label=f"Line {line}",
+        )
+
+    ax.axhline(0, color="black", linewidth=1, linestyle="--", alpha=0.6)
+    ax.set_xlabel("Hour of day")
+    ax.set_ylabel("Extra travel time on blocked/special variant vs. baseline (min)")
+    ax.set_title(
+        "Blocked/Special Variant vs. Baseline -- Travel-Time Delta by Hour, All Lines",
+        fontsize=12, fontweight="bold",
+    )
+    ax.legend(fontsize=9, title="Line")
+    ax.grid(True, alpha=0.3)
+
+    fig.text(
+        0.5, -0.05,
+        "How to read: for each hour of day and each line, (median travel time on that line's blocked/special "
+        "variant) minus (median travel time on its baseline variant), both directions pooled and using only the "
+        "confirmed post-merge variant set. Curves above the dashed zero line mean the detour costs time at that "
+        "hour; curves below mean it saves time.",
+        ha="center", va="top", fontsize=8, wrap=True,
+    )
+    fig.savefig(out_path, dpi=120, bbox_inches="tight")
+    plt.close(fig)
 
 
 def run() -> None:
@@ -93,6 +143,7 @@ def run() -> None:
     endpoints = pa.block_endpoints(effective_df)
 
     summary_rows = []
+    line_deltas: dict[int, pd.Series] = {}
     for line in sorted(endpoints["route_name"].unique()):
         baseline_ep = pa.baseline_endpoints(endpoints, route_name=line)
         blocked_ep = pa.blocked_endpoints(endpoints, route_name=line)
@@ -106,11 +157,18 @@ def run() -> None:
         summary_rows.append(row)
         print(f"Saved -> {out_path}  ({row})")
 
+        delta, _, _ = compute_delta(baseline_ep, blocked_ep)
+        line_deltas[line] = delta
+
     summary = pd.DataFrame(summary_rows)
     summary_path = OUT_DIR / "baseline_vs_blocked_summary.csv"
     summary.to_csv(summary_path, index=False)
     print(f"Saved -> {summary_path}")
     print(summary.to_string(index=False))
+
+    cross_line_path = OUT_DIR / "delta_all_lines.png"
+    plot_all_lines_delta(line_deltas, cross_line_path)
+    print(f"Saved -> {cross_line_path}")
 
 
 if __name__ == "__main__":

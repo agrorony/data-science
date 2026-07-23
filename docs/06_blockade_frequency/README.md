@@ -10,6 +10,18 @@ not the original stage5 `variant_type` column. House style is
 unchanged: Reds colormap, 0–1 scale, % annotated per cell, labeled
 colorbar, bold panel title.
 
+**Revision round 2 (section C):** two new figures add a project-wide
+view on top of the existing per-line heatmaps: `blockade_all_lines.png`
+(all 7 lines as subplots in a 4×2 grid, one shared colorbar, common
+0–100% scale so panels are directly comparable) and
+`blockade_saturday_summary.png` (rows = lines, columns = months, cell =
+Saturday blockade share — a compact single-panel view of the
+Saturday-concentration pattern already visible per line below). Line
+97's new exclusion ([docs/03_variants](../03_variants/README.md),
+direction B variant 2) drops its overall share slightly (5.0% → 4.7%);
+every other line's numbers are unchanged (line 19's new exclusion was
+already classified `regular`, not `blocked` — see docs/03).
+
 ## Cross-line summary (overall non-baseline share, both directions pooled)
 
 | Line | Overall share | Saturday share | n (Saturday blocks) |
@@ -20,7 +32,7 @@ colorbar, bold panel title.
 | 17 | 12.2% | 80.5% | 82 |
 | 19 | 8.9% | 75.7% | 74 |
 | 22 | **11.7%** | 51.2% | 80 |
-| 97 | 5.0% | 66.4% | 110 |
+| 97 | 4.7% | 66.4% | 110 |
 
 **Line 22 is fixed.** In the first pass, line 22's overall share (0.2%)
 sat at control-line level — [docs/07_blockade_investigation](../07_blockade_investigation/README.md)
@@ -53,6 +65,10 @@ Per-line detail: [line_9](line_9/README.md), [line_14](line_14/README.md),
 [line_15](line_15/README.md), [line_17](line_17/README.md),
 [line_19](line_19/README.md), [line_22](line_22/README.md),
 [line_97](line_97/README.md).
+
+**Figures:** per-line `line_<N>/blockade_frequency_<N>.png`, plus the
+combined `blockade_all_lines.png` and the compact
+`blockade_saturday_summary.png` (both section C, revision round 2).
 
 **Sources:** `govData/df_cleaned.csv`, `govData/variant_merges.json`,
 `pipeline/variant_merges.py`, `pipeline/plot_blockade_frequency.py`.

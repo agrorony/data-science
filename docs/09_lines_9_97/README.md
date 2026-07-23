@@ -11,6 +11,19 @@ grew). Figure style is unchanged (variant-share bar chart + travel-time
 boxplot grid), now with one pooled panel per line instead of one panel
 per direction.
 
+**Revision round 2 (section D):** line 97's new exclusion
+([docs/03_variants](../03_variants/README.md), direction B variant 2,
+classified `blocked`) shifts its own route-share numbers slightly (see
+the updated Weekday/Combined rows below — Saturday and all of line 9's
+numbers are unaffected, since that exclusion only removes line 97
+blocks). A new figure per line, `line_<N>_blockade_delta.png`, adds a
+direct answer to "what happens to 9/97 during a blockade": red =
+the line's own detour cost (blocked variant vs. its own baseline, in
+hours it ran the detour); blue = the cost of staying on the baseline
+route during confirmed 17/19/22 blockade windows where this line itself
+was *not* blocked. Hours 25/26 are dropped from every figure per the
+global rule.
+
 ## Method
 
 Identical to [docs/08](../08_control_lines_15_14/README.md): windows are
@@ -54,11 +67,16 @@ non-significant positive delta.
 | Question | Category | n blockade | n normal | Result |
 |---|---|---|---|---|
 | (a) Route | Saturday | 68 | 26 | 85.3% vs 46.2% non-baseline, Chi-sq p=**0.0003** |
-| (a) Route | Weekday | 506 | 1,783 | 5.7% vs 1.0%, Chi-sq p≈**0** |
-| (a) Route | Combined | 574 | 1,809 | 15.2% vs 1.7%, Chi-sq p≈**0** |
+| (a) Route | Weekday | 504 | 1,777 | 5.4% vs 0.7%, Chi-sq p≈**0** |
+| (a) Route | Combined | 572 | 1,803 | 14.9% vs 1.3%, Chi-sq p≈**0** |
 | (b) Time | Saturday | 10 | 14 | 32.4 vs 33.0 min, Δ=−0.6, MWU p=0.121 (ns) |
 | (b) Time | Weekday | 451 | 1,652 | 42.4 vs 43.4 min, Δ=−1.0, MWU p=0.293 (ns) |
 | (b) Time | Combined | 461 | 1,666 | 42.1 vs 43.3 min, Δ=−1.1, MWU p=0.161 (ns) |
+
+*(Weekday/Combined route-share numbers updated in revision round 2 —
+Saturday and all (b) time numbers are unchanged, since the new
+exclusion only removes a small number of weekday-flagged blocked
+blocks; the conclusion below is unaffected.)*
 
 **Verdict: route affected in both strata; time not affected (if
 anything, slightly faster, wrong sign for congestion).** Line 97 shows
@@ -95,6 +113,43 @@ closure, more than a confirmed travel-time delay — with line 9 now
 additionally showing a specific, credible Saturday delay that the first
 pass could not detect.
 
+## Section D (revision round 2) — own detour vs. absorbing others' blockade
+
+Two curves per line, per-hour: **red** = the line's own detour cost
+(its blocked variant minus its own baseline, in hours it ran the
+blocked variant — identical computation to
+[docs/05](../05_skip_comparison/README.md)); **blue** = the cost of
+*staying on* its own baseline route during confirmed lines 17/19/22
+blockade windows, restricted to the subset of those windows where this
+line itself was **not** also running a blocked variant (i.e. genuinely
+absorbing the traffic rather than detouring).
+
+**Line 9** (`line_9_blockade_delta.png`): red is negative almost
+everywhere (own detour saves 15.8 min overall — matches docs/05), with
+one brief exception around 17:00 (+1.5 min). Blue is small but mostly
+positive (+1.3 min overall, n=268 blockade vs n=1,290 matched-normal
+blocks), meaning that in the hours line 9 stays on its baseline route
+while 17/19/22 are blocked, it runs a little slower than a normal
+matched hour — consistent with, and about the same size as, the
+Weekday travel-time effect found in section (b) above. **Verdict: both
+route and time are affected** — line 9 detours when it can (and saves
+time doing so), and picks up a small, real time cost in the hours it
+doesn't.
+
+**Line 97** (`line_97_blockade_delta.png`): the more striking pattern —
+red is *strongly positive* (up to +14 min) during hours 14–17, even
+though line 97's all-hours median detour saves 8.2 min overall
+([docs/05](../05_skip_comparison/README.md)). Line 97's blocked variant
+is not uniformly a shortcut: at those specific afternoon hours the
+detour itself is the slow option. Blue stays close to zero to mildly
+negative overall (−1.1 min, n=454 blockade vs n=1,661 matched-normal
+blocks) — staying on the baseline route during others' blockades costs
+line 97 essentially nothing. **Verdict: route is affected (per section
+(a) above) and the time effect is hour-dependent** — mostly neutral to
+beneficial, but the detour becomes a net time cost specifically in the
+mid-afternoon window, a pattern the pooled Weekday/Combined statistics
+in section (b) average away.
+
 ## Figures
 
 - `line_9_variant_share_comparison.png`, `line_97_variant_share_comparison.png`
@@ -103,6 +158,9 @@ pass could not detect.
 - `line_9_travel_time_comparison.png`, `line_97_travel_time_comparison.png`
   — travel-time boxplots (own baseline variant, both directions pooled),
   same three strata, n and Mann-Whitney p annotated.
+- `line_9_blockade_delta.png`, `line_97_blockade_delta.png` (section D,
+  revision round 2) — own-detour vs. absorbing-others'-blockade delta by
+  hour, both directions pooled.
 
 Underlying numbers: `variant_share_stats.csv`, `travel_time_stats.csv`.
 
@@ -110,7 +168,11 @@ Underlying numbers: `variant_share_stats.csv`, `travel_time_stats.csv`.
 `docs/08_control_lines_15_14/blockade_windows_used.csv`,
 [docs/02_route_mapping](../02_route_mapping/README.md),
 [docs/03_variants](../03_variants/README.md),
+[docs/05_skip_comparison](../05_skip_comparison/README.md),
 [docs/06_blockade_frequency](../06_blockade_frequency/README.md),
 [docs/07_blockade_investigation](../07_blockade_investigation/README.md),
 [docs/08_control_lines_15_14](../08_control_lines_15_14/README.md),
-`pipeline/variant_merges.py`, `pipeline/plot_line9_97_blockade_impact.py`.
+`pipeline/variant_merges.py`, `pipeline/pooled_analysis.py`,
+`pipeline/plot_baseline_vs_blocked_delta.py`,
+`pipeline/plot_control_comparison.py`,
+`pipeline/plot_line9_97_blockade_impact.py`.

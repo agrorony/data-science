@@ -21,6 +21,15 @@ from pipeline import config
 LOW_CONFIDENCE_THRESHOLD = config.LOW_CONFIDENCE_THRESHOLD
 BLOCK_KEYS = ["route_name", "direction_group", "route_variant_id", "month", "day_of_week", "scheduled_departure_time"]
 
+LATE_NIGHT_HOURS = [25, 26]
+
+
+def drop_late_night_hours(df: pd.DataFrame, hour_col: str = "scheduled_departure_time") -> pd.DataFrame:
+    """Revision round 2, global rule -- hours 25/26 (01:00/02:00 next day)
+    must not appear in any figure. Drop those rows outright rather than
+    relabeling them, per every hour-of-day figure's data."""
+    return df[~df[hour_col].isin(LATE_NIGHT_HOURS)].copy()
+
 
 def block_endpoints(effective_df: pd.DataFrame, min_observations: int = LOW_CONFIDENCE_THRESHOLD) -> pd.DataFrame:
     """One row per block: end-to-end travel time/distance (at the

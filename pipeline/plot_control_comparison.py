@@ -75,7 +75,8 @@ def load_baseline_blocks(effective_df: pd.DataFrame, route_name: int, min_n: int
         .tail(1)
         .copy()
     )
-    last_stop["hour_display"] = last_stop["scheduled_departure_time"].replace({25: 1, 26: 2})
+    last_stop = pa.drop_late_night_hours(last_stop)
+    last_stop["hour_display"] = last_stop["scheduled_departure_time"]
     return last_stop
 
 
@@ -149,7 +150,7 @@ def plot_hourly_delta(tagged: pd.DataFrame, out_path, title: str, stats_rows: li
         ax.axvspan(hr - 0.4, hr + 0.4, color="grey", alpha=0.18, zorder=0, label="Saturday-only window hour" if not band_labeled else "")
         band_labeled = True
 
-    ax.set_xlabel("Hour of day (25/26 shown as 01:00/02:00 next day)")
+    ax.set_xlabel("Hour of day")
     ax.set_ylabel("Extra travel time in blockade window (min)")
     ax.set_title(title, fontsize=12, fontweight="bold")
     ax.legend(fontsize=9)

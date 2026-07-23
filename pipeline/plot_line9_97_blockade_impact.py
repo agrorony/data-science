@@ -47,7 +47,8 @@ import numpy as np
 import pandas as pd
 from scipy import stats
 
-from pipeline import config, variant_merges as vm
+from pipeline import config, variant_merges as vm, pooled_analysis as pa
+from pipeline import plot_baseline_vs_blocked_delta as pbd
 
 OUT_DIR = config.REPO_ROOT / "docs" / "09_lines_9_97"
 WINDOWS_CSV = config.REPO_ROOT / "docs" / "08_control_lines_15_14" / "blockade_windows_used.csv"
@@ -282,6 +283,115 @@ def plot_travel_time(tagged: pd.DataFrame, stats_rows: list[dict], line_label: s
 
 
 # ---------------------------------------------------------------------------
+# Section D (revision round 2) -- own detour vs. absorbing others' blockade
+# ---------------------------------------------------------------------------
+
+
+def own_blocked_slots(effective_df: pd.DataFrame, route_name: int) -> set:
+    """(month, day_of_week, scheduled_departure_time) slots where this
+    line itself (any direction/variant) ran a blocked variant."""
+    scope = effective_df[
+        (effective_df["route_name"] == route_name) & (effective_df["variant_type_v2"] == "blocked")
+    ]
+    return set(zip(scope["month"], scope["day_of_week"], scope["scheduled_departure_time"]))
+
+
+def exclude_own_blocked_slots(windows: pd.DataFrame, own_slots: set) -> pd.DataFrame:
+    keys = list(zip(windows["month"], windows["day_of_week"], windows["scheduled_departure_time"]))
+    keep = [k not in own_slots for k in keys]
+    return windows[keep].reset_index(drop=True)
+
+
+def plot_own_vs_absorbed_delta(line_label: str, route_name: int, effective_df: pd.DataFrame, windows: pd.DataFrame, out_path) -> dict:
+    """Section D -- two curves per line: red = own detour (blocked variant
+    minus baseline, hours the line itself ran the blocked variant); blue =
+    staying on its own baseline route during confirmed lines 17/19/22
+    blockade windows where this line itself was NOT blocked (absorbing the
+    traffic instead of detouring)."""
+    endpoints = pa.block_endpoints(effective_df)
+    baseline_ep = pa.baseline_endpoints(endpoints, route_name=route_name)
+    blocked_ep = pa.blocked_endpoints(endpoints, route_name=route_name)
+
+    red_delta = pd.Series(dtype=float)
+    red_thin_hours: list = []
+    if not blocked_ep.empty and not baseline_ep.empty:
+        red_delta, red_thin_hours, _ = pbd.compute_delta(baseline_ep, blocked_ep)
+
+    own_slots = own_blocked_slots(effective_df, route_name)
+    absorb_windows = exclude_own_blocked_slots(windows, own_slots)
+    baseline_ep_dropped = pa.drop_late_night_hours(baseline_ep)
+    tagged = tag_windows(baseline_ep_dropped, absorb_windows)
+
+    blue_delta = pd.Series(dtype=float)
+    blue_thin_hours: list = []
+    n_absorb_blockade = n_absorb_normal = 0
+    absorb_overall_delta = None
+    if not tagged.empty:
+        agg = tagged.groupby(["scheduled_departure_time", "group"])["end_time_min"].median().unstack()
+        n_by_group = tagged.groupby(["scheduled_departure_time", "group"])["end_time_min"].size().unstack()
+        if "blockade" in agg.columns and "matched_normal" in agg.columns:
+            blue_delta = (agg["blockade"] - agg["matched_normal"]).dropna().sort_index()
+            blue_n = n_by_group.get("blockade", pd.Series(dtype=int))
+            blue_thin_hours = [h for h in blue_delta.index if blue_n.get(h, 0) < pbd.THIN_THRESHOLD]
+        n_absorb_blockade = int((tagged["group"] == "blockade").sum())
+        n_absorb_normal = int((tagged["group"] == "matched_normal").sum())
+        if n_absorb_blockade and n_absorb_normal:
+            absorb_overall_delta = round(
+                tagged.loc[tagged["group"] == "blockade", "end_time_min"].median()
+                - tagged.loc[tagged["group"] == "matched_normal", "end_time_min"].median(),
+                1,
+            )
+
+    fig, ax = plt.subplots(figsize=(10, 5.5))
+
+    band_labeled_red = False
+    for hr in red_thin_hours:
+        ax.axvspan(hr - 0.4, hr + 0.4, color="#d62728", alpha=0.10, zorder=0, label="Thin data, own detour (<8 blocks)" if not band_labeled_red else "")
+        band_labeled_red = True
+    band_labeled_blue = False
+    for hr in blue_thin_hours:
+        ax.axvspan(hr - 0.4, hr + 0.4, color="#1f77b4", alpha=0.10, zorder=0, label="Thin data, absorbing (<8 blocks)" if not band_labeled_blue else "")
+        band_labeled_blue = True
+
+    if not red_delta.empty:
+        ax.plot(red_delta.index, red_delta.values, color="#d62728", linewidth=2.2, marker="o", markersize=5, label="Own detour: blocked variant minus baseline")
+    if not blue_delta.empty:
+        ax.plot(blue_delta.index, blue_delta.values, color="#1f77b4", linewidth=2.2, marker="s", markersize=5, label="Staying on route during others' blockade: blockade window minus matched normal")
+
+    ax.axhline(0, color="black", linewidth=1, linestyle="--", alpha=0.6)
+    ax.set_xlabel("Hour of day")
+    ax.set_ylabel("Extra travel time (min)")
+    ax.set_title(f"{line_label}: Own Detour vs. Staying on Route During Others' Blockades", fontsize=12, fontweight="bold")
+    ax.legend(fontsize=8, loc="best")
+    ax.grid(True, alpha=0.3)
+
+    n_own_blocked, n_own_baseline = len(blocked_ep), len(baseline_ep)
+    own_overall_delta = (
+        round(blocked_ep["end_time_min"].median() - baseline_ep["end_time_min"].median(), 1)
+        if n_own_blocked and n_own_baseline else None
+    )
+
+    caption = (
+        f"How to read: red = {line_label}'s own blocked/special variant minus its own baseline variant, both "
+        f"directions pooled, in hours {line_label} itself ran the blocked variant (n={n_own_blocked} blocked vs "
+        f"n={n_own_baseline} baseline blocks). Blue = {line_label}'s own baseline-variant travel time in confirmed "
+        f"lines 17/19/22 blockade windows minus matched-normal hours, restricted to windows where {line_label} "
+        f"itself stayed on its baseline route (n={n_absorb_blockade} blockade vs n={n_absorb_normal} matched-normal "
+        f"blocks). Positive = slower than usual; shaded bands mark hours with fewer than {pbd.THIN_THRESHOLD} "
+        f"observations in that curve's own category."
+    )
+    fig.text(0.5, -0.08, caption, ha="center", va="top", fontsize=8, wrap=True)
+    fig.savefig(out_path, dpi=120, bbox_inches="tight")
+    plt.close(fig)
+
+    return {
+        "route_name": route_name,
+        "n_own_blocked": n_own_blocked, "n_own_baseline": n_own_baseline, "own_overall_delta_min": own_overall_delta,
+        "n_absorb_blockade": n_absorb_blockade, "n_absorb_normal": n_absorb_normal, "absorb_overall_delta_min": absorb_overall_delta,
+    }
+
+
+# ---------------------------------------------------------------------------
 # Orchestration
 # ---------------------------------------------------------------------------
 
@@ -318,6 +428,14 @@ def run() -> None:
         time_path = OUT_DIR / f"{line_label.lower().replace(' ', '_')}_travel_time_comparison.png"
         plot_travel_time(tagged_baseline, time_rows, line_label, time_path)
         print(f"Saved -> {time_path}")
+
+    # (D) revision round 2 -- own detour vs. absorbing others' blockade
+    delta_rows: list[dict] = []
+    for line_label, route_name in lines:
+        delta_path = OUT_DIR / f"line_{route_name}_blockade_delta.png"
+        row = plot_own_vs_absorbed_delta(line_label, route_name, effective_df, windows, delta_path)
+        delta_rows.append(row)
+        print(f"Saved -> {delta_path}  ({row})")
 
     share_stats_df = pd.DataFrame(all_share_rows)
     share_csv = OUT_DIR / "variant_share_stats.csv"

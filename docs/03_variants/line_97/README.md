@@ -7,23 +7,30 @@ labels.
 
 ## direction_A
 
-- **Raw** (`variants_raw_direction_A.png`): 4 variants clear `n>5`.
+- **Raw** (`variants_raw.png`, top panel): 4 variants clear `n>5`.
 - **Merges applied:** `1+2` → one merged variant (`n=37`, 26 stops,
   variant 1's sequence). Reference (variant 0, `n=1,133`) unmerged.
 - **Exclusions:** variants 3 and 4 dropped entirely (`n=7` and `n=4` in
   the raw data).
-- **Merged** (`variants_merged_direction_A.png`): 2 variants clear
+- **Merged** (`variants_merged.png`, top panel): 2 variants clear
   `n>5` (down from 4 raw, after exclusions).
 
 ## direction_B
 
-- **Raw** (`variants_raw_direction_B.png`): 6 variants clear `n>5`.
+- **Raw** (`variants_raw.png`, bottom panel): 6 variants clear `n>5`.
 - **Merges applied:** `3+1` → one merged variant (`n=27`, 32 stops,
   variant 1's sequence, the more frequent of the two); `0+4` → new
   reference (`n=1,158`, 34 stops, variant 0's sequence).
-- **Exclusions:** variant 5 dropped entirely (`n=7` in the raw data).
-- **Merged** (`variants_merged_direction_B.png`): 3 variants clear
-  `n>5` (down from 6 raw, after the exclusion).
+- **Exclusions:** variant 5 dropped entirely (`n=7` in the raw data);
+  revision round 2 adds **variant 2** (`n=8`, 32 stops, classified
+  `blocked` under the >15-stop rule — unlike line 19B's exclusion, this
+  one *does* remove real blocked observations, so it changes line 97's
+  own blocked-share and delta figures downstream: see
+  [docs/06](../../06_blockade_frequency/README.md) and
+  [docs/09](../../09_lines_9_97/README.md)).
+- **Merged** (`variants_merged.png`, bottom panel): **2** variants clear
+  `n>5` (down from 6 raw, after both exclusions — verified: the merged
+  grid shows exactly 2 rows).
 
 **Note carried over from the pre-revision phase 03 write-up:** the
 pre-2026-07-19-style clustering step used to surface line 97's second,

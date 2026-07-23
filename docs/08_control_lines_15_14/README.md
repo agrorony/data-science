@@ -1,5 +1,12 @@
 # 08 — Indirect Impact on Control Lines 15 and 14
 
+**Approved as of revision round 2** — untouched except that both
+figures were regenerated to drop hours 25/26 (01:00/02:00 next day)
+per that round's global rule. Confirmed by diffing
+`control_comparison_stats.csv` and `blockade_windows_used.csv` against
+the pre-round-2 committed versions: byte-identical, so none of the
+numbers or findings below changed.
+
 **Revision round (sections C, G): this phase has been rebuilt.** Both
 directions of line 14 are now pooled into one distribution (line 15
 already had no direction split); only the delta chart is kept (the

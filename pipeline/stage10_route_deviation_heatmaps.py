@@ -62,12 +62,19 @@ def build_group_heatmap(display_sub: pd.DataFrame, stop_code_to_name: dict[int, 
     return np.array(heatmap_data), labels_y, station_labels
 
 
-def plot_group_heatmap(heatmap_data, labels_y, station_labels, line, group, path) -> None:
+def heatmap_row_height(labels_y) -> float:
+    """Height (inches) a single-panel figure/subplot row needs to fit
+    `labels_y` rows of the green/white grid, floor at 4in."""
+    return max(4, 0.35 * len(labels_y) + 2)
+
+
+def draw_group_heatmap(ax, heatmap_data, labels_y, station_labels, title) -> None:
+    """Draw the green/white stop-presence grid into an existing Axes,
+    without creating or saving a figure -- lets callers compose multiple
+    groups into one multi-panel figure (see plot_variants_revised.py)."""
     cmap = ListedColormap(["#f7f7f7", "#1D9E75"])
     columns = [rtl(s) for s in station_labels]
-    fig_height = max(4, 0.35 * len(labels_y) + 2)
 
-    fig, ax = plt.subplots(figsize=(16, fig_height))
     sns.heatmap(
         heatmap_data, cmap=cmap, vmin=0, vmax=1, cbar=False,
         xticklabels=columns, yticklabels=labels_y,
@@ -75,13 +82,17 @@ def plot_group_heatmap(heatmap_data, labels_y, station_labels, line, group, path
     )
     ax.set_xticklabels(ax.get_xticklabels(), rotation=45, ha="right", fontsize=7)
     ax.set_yticklabels(ax.get_yticklabels(), fontsize=8)
-    ax.set_title(f"Route deviations from reference -- line {line} / {group}")
+    ax.set_title(title)
     ax.set_xlabel("Stations (longest observed route order)")
     ax.set_ylabel("Route variants (sorted by occurrence count)")
 
     legend = [Patch(color="#1D9E75", label="Present"), Patch(color="#f7f7f7", label="Missing")]
     ax.legend(handles=legend, loc="upper right", bbox_to_anchor=(1.15, 1))
 
+
+def plot_group_heatmap(heatmap_data, labels_y, station_labels, line, group, path) -> None:
+    fig, ax = plt.subplots(figsize=(16, heatmap_row_height(labels_y)))
+    draw_group_heatmap(ax, heatmap_data, labels_y, station_labels, f"Route deviations from reference -- line {line} / {group}")
     fig.tight_layout()
     fig.savefig(path, dpi=120)
     plt.close(fig)
