@@ -35,6 +35,16 @@ from pipeline import config
 VARIANT_MERGES_PATH = config.GOV_DATA_DIR / "variant_merges.json"
 BLOCKED_STOP_THRESHOLD = 15
 
+# Revision round 4, section C -- line 14's route shares 0 stops with the
+# 17/19 blockade footprint, and every one of its non-reference merged
+# variants is a near-singleton (n=1, one n=4) that skips 1-6 stops and adds
+# none: a stop-recording dropout signature, not a detour (see
+# docs/06_blockade_frequency/line_14/blocked_slots_investigation.md). Force
+# these to "noise" instead of "blocked" so line 14's blockade share is 0%
+# everywhere project-wide (phases 05/06/08/09 all read variant_type_v2 and
+# need no line-14 special case of their own).
+LINE_14_NO_BLOCKED = 14
+
 
 def load_merge_config(path=None) -> dict:
     path = path or VARIANT_MERGES_PATH
@@ -98,11 +108,15 @@ def build_effective_variant_summary(variant_summary: pd.DataFrame, merge_config:
                 }
             )
 
+    def _classify(r):
+        if r["is_reference"]:
+            return "reference"
+        if int(r["route_name"]) == LINE_14_NO_BLOCKED:
+            return "noise"
+        return "blocked" if r["n_stops"] > BLOCKED_STOP_THRESHOLD else "regular"
+
     out = pd.DataFrame(rows)
-    out["variant_type_v2"] = out.apply(
-        lambda r: "reference" if r["is_reference"] else ("blocked" if r["n_stops"] > BLOCKED_STOP_THRESHOLD else "regular"),
-        axis=1,
-    )
+    out["variant_type_v2"] = out.apply(_classify, axis=1)
     return out.sort_values(["route_name", "direction_group", "route_variant_id"]).reset_index(drop=True)
 
 

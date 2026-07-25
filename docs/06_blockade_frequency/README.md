@@ -22,17 +22,71 @@ direction B variant 2) drops its overall share slightly (5.0% → 4.7%);
 every other line's numbers are unchanged (line 19's new exclusion was
 already classified `regular`, not `blocked` — see docs/03).
 
+**Revision round 3:**
+
+- **Section A (palette):** row/panel labels for lines now use the
+  single project-wide color per line (`pipeline.config.LINE_COLORS`,
+  documented in `docs/README.md`) wherever more than one line appears —
+  applied to `blockade_saturday_summary.png`'s row labels and
+  `disagreement_windows.png`'s row labels below (the month×day heatmaps
+  themselves stay on the Reds share-scale, which encodes share, not
+  line identity).
+- **Section D:** `blockade_saturday_summary.png`'s rows are now grouped
+  and visually separated: **17/19/22** (shared blocked segment) →
+  **9/97** (Aza St., non-shared) → **14/15** (controls), instead of the
+  previous numeric-ish order.
+- **Section C (new analysis below):** for the two (month, day) cells
+  where most protest lines sit near 100% but one or two disagree
+  substantially, a new figure (`disagreement_windows.png`) and CSV
+  (`disagreement_windows.csv`) show each line's actual per-hour schedule
+  and variant type for that exact cell.
+
+**Revision round 4:**
+
+- **Section C — line 14 reclassified to never-blocked:** line 14's 14
+  "blocked" slots (11 merged variants, all near-singleton) were
+  confirmed to be single-trip stop-recording dropouts, not detours —
+  its route shares 0 stops with the 17/19 blockade footprint, the
+  flagged variants add zero new stops, their timing has no
+  Saturday-evening pattern, and their travel time is unaffected (see
+  [docs/06_blockade_frequency/line_14/blocked_slots_investigation.md](line_14/blocked_slots_investigation.md)).
+  `pipeline.variant_merges` now forces every non-reference line-14
+  variant to `variant_type_v2 == "noise"` instead of `"blocked"`, so
+  line 14's blockade share is **exactly 0% everywhere** (was 0.8%
+  overall / 3.1% Saturday) — every figure below reflects this. See
+  [line_14](line_14/README.md) for the full before/after.
+- **Section B — Saturday summary excludes 22B:** `blockade_saturday_summary.png`'s
+  line-22 row is now computed from **direction_A only** — direction_B
+  barely touches the blockade footprint (2 of the 10 footprint stops)
+  and its nominal share was inflated by non-corridor 1-stop variants,
+  not genuine detours (see
+  [disagreement_deep_dive.md](disagreement_deep_dive.md), Hypothesis
+  1). The row is now labeled "Line 22 (dir A)"; every other row is
+  unchanged (still both directions pooled). This affects only that one
+  figure — the per-line `blockade_frequency_22.png` and the
+  cross-line-summary table below still pool both directions, since the
+  deep dive's finding is specific to Saturday-evening behavior.
+- **Section A — new figure explaining 22B:** [line_22/saturday_timeline_and_cost_22B.png](line_22/README.md)
+  shows why 22B disagrees instead of just excluding it: a Saturday-evening
+  timeline (19:00–24:00, all six protest-line/direction rows) alongside
+  22B's own pass-through time cost when it drives through the 17/19
+  blockade instead of detouring.
+
 ## Cross-line summary (overall non-baseline share, both directions pooled)
 
 | Line | Overall share | Saturday share | n (Saturday blocks) |
 |---|---|---|---|
 | 9 | 7.0% | 84.1% | 82 |
-| 14 (control) | 0.8% | 3.1% | 65 |
+| 14 (control) | **0.0%** | **0.0%** | 65 |
 | 15 (control) | 0.3% | 0.0% | 56 |
 | 17 | 12.2% | 80.5% | 82 |
 | 19 | 8.9% | 75.7% | 74 |
 | 22 | **11.7%** | 51.2% | 80 |
 | 97 | 4.7% | 66.4% | 110 |
+
+(This table pools both directions of every line, including 22, per
+house style. The compact `blockade_saturday_summary.png` figure below
+is the one exception — round 4, section B above.)
 
 **Line 22 is fixed.** In the first pass, line 22's overall share (0.2%)
 sat at control-line level — [docs/07_blockade_investigation](../07_blockade_investigation/README.md)
@@ -42,15 +96,53 @@ line 22 now shows **11.7%** — squarely with lines 9/17/19/97, and its
 May-weekday cells now clearly show the same closure pattern as line 19
 (see `blockade_frequency_22.png`: May Sat=100%, Sep Sat=100%, Tue/May=62%).
 
-**Control lines are no longer exactly 0%.** As documented in
+**Line 15 is not exactly 0%; line 14 is (round 4).** As documented in
 [docs/07's addendum](../07_blockade_investigation/README.md), the new
-rule occasionally labels a rare, single-observation route deviation on
-lines 14/15 as "blocked" simply because it has >15 stops, with no way to
-distinguish that from a real detour except low frequency. Their shares
-(0.8% and 0.3%) remain far below every non-control line, so they still
-function as controls in practice, but this is a real, honest side-effect
-of dropping the fraction threshold — not a data artifact to explain
-away.
+>15-stop rule occasionally labels a rare, single-observation route
+deviation as "blocked" simply because it has enough stops, with no way
+to distinguish that from a real detour except low frequency — this is
+still true of line 15 (0.3%). Line 14 was the same story (0.8%) until
+round 4's investigation confirmed its flagged variants are specifically
+stop-recording dropouts (see the addendum above); it is now reclassified
+to `"noise"` and reads exactly 0%. Line 15 has not been investigated the
+same way and keeps its small nonzero share.
+
+## Why do protest lines disagree in "mostly-100%" windows? (revision round 3, section C)
+
+Scanning every (month, day) cell for windows where most protest lines
+(9/17/19/22/97) sit at ≥90% blockade share but at least one sits below
+70% (n≥3 per line) finds exactly two: **Saturday April** and **Saturday
+June**. In both, lines 17 (and usually 9/97) are at 100% while lines 19
+and especially 22 are markedly lower (25–75%). This extends
+[docs/07_blockade_investigation](../07_blockade_investigation/README.md)'s
+Hypothesis 4 (line 22's smaller apparent exposure) with concrete
+per-window schedule evidence, without modifying that folder.
+
+`disagreement_windows.png` shows every protest line's exact per-(hour,
+direction) slot for both Saturdays, colored by variant type. The answer
+is unambiguous in both cases: **the disagreeing lines run the SAME
+hour-slots as the 100% lines — not extra, out-of-window service — but on
+their regular/baseline variant instead of a blocked one.**
+
+- **Saturday April, hours 22:00–23:00** (the slots common to 17/19/22):
+  line 17 is `blocked` in all 4 slots (100%); line 19 is `blocked` in 3
+  of 4 (75%, `reference` at 23:00 direction_A); line 22 is `blocked` in
+  only 1 of 4 (25%, `reference` at 22:00 direction_B and both 23:00
+  slots).
+- **Saturday June, hours 21:00–23:00**: line 17 is `blocked` in all 6
+  slots (100%); line 19 in 4 of 6 (67%, `reference` at both 23:00
+  slots); line 22 in 3 of 6 (50%, `reference` at 21:00 direction_B and
+  both 23:00 slots).
+
+**Conclusion: this is genuine differential exposure at the same moment
+in time, not a scheduling or denominator artifact.** At the exact hours
+line 17's buses were detouring around the closure, some of line 19's
+and (more often) line 22's buses passed through on their normal route.
+This is consistent with line 22's longer, only-partially-overlapping
+corridor exposure documented in docs/07 — the closure evidently doesn't
+block 100% of line 22's (or, less often, line 19's) scheduled trips
+through the area even during its most active hours, while it does for
+line 17.
 
 ## Pattern: still concentrated on Saturdays
 
@@ -66,9 +158,16 @@ Per-line detail: [line_9](line_9/README.md), [line_14](line_14/README.md),
 [line_19](line_19/README.md), [line_22](line_22/README.md),
 [line_97](line_97/README.md).
 
-**Figures:** per-line `line_<N>/blockade_frequency_<N>.png`, plus the
-combined `blockade_all_lines.png` and the compact
-`blockade_saturday_summary.png` (both section C, revision round 2).
+**Figures:** per-line `line_<N>/blockade_frequency_<N>.png`, the
+combined `blockade_all_lines.png` and the compact, grouped
+`blockade_saturday_summary.png` (round 2 section C, round 3 sections A/D,
+round 4 section B: line 22's row is direction_A only), and
+`disagreement_windows.png` (round 3 section C). Round 4 section A adds
+[line_22/saturday_timeline_and_cost_22B.png](line_22/README.md).
 
 **Sources:** `govData/df_cleaned.csv`, `govData/variant_merges.json`,
-`pipeline/variant_merges.py`, `pipeline/plot_blockade_frequency.py`.
+`pipeline/variant_merges.py`, `pipeline/config.py`,
+`pipeline/plot_blockade_frequency.py`,
+[docs/07_blockade_investigation](../07_blockade_investigation/README.md),
+[disagreement_deep_dive.md](disagreement_deep_dive.md),
+[line_14/blocked_slots_investigation.md](line_14/blocked_slots_investigation.md).

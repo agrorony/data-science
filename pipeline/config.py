@@ -161,6 +161,18 @@ def build_route_id_to_line(targets: dict[str, list[int]] | None = None) -> dict[
     return route_id_to_line
 
 
+# Revision round 3, section A -- one fixed color per line, used in every
+# figure where more than one line appears (phases 04, 05, 06 row labels, 08).
+# Families: 17/19/22 = shared-corridor "protest" lines (reds), 9/97 = Aza St.
+# non-shared protest lines (purples), 14/15 = controls (blues/teal). The
+# reds/purples match round 2's plot_baseline_vs_blocked_delta.CROSS_LINE_COLORS
+# verbatim so already-published figures don't shift.
+LINE_COLORS: dict[int, str] = {
+    17: "#b30000", 19: "#e34a33", 22: "#fc8d59",
+    9: "#54278f", 97: "#9e9ac8",
+    14: "#045a8d", 15: "#74a9cf",
+}
+
 LINES: list[str] = sorted(load_target_route_ids().keys(), key=lambda x: (len(x), x))
 ROUTE_ID_TO_LINE: dict[int, str] = build_route_id_to_line()
 MULTI_ROUTE_ID_LINES: list[str] = [

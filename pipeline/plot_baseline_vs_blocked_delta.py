@@ -12,6 +12,13 @@ month, as in phase 08), with both directions of the line pooled
 (pipeline.variant_merges) enters the statistics -- excluded raw variants
 never appear at all, and merged variants use their combined counts.
 
+**Revision round 3, section B:** a merged variant is only eligible to
+count as "blocked" here if its `count > MIN_BLOCKED_VARIANT_COUNT` --
+see `filter_significant_blocked`'s docstring for why (singleton/
+near-singleton near-full-length variants are recording noise, not real
+detours, and are the *entire* reason control lines 14/15 showed up in
+this phase at all).
+
 One figure per line: docs/05_skip_comparison/line_<N>_baseline_vs_blocked_delta.png
 """
 
@@ -26,6 +33,28 @@ from pipeline import config, variant_merges as vm, pooled_analysis as pa
 
 OUT_DIR = config.REPO_ROOT / "docs" / "05_skip_comparison"
 THIN_THRESHOLD = 8  # fewer than this many blocked blocks at an hour -> shaded as thin
+MIN_BLOCKED_VARIANT_COUNT = 5  # matches plot_variants_revised.RAW_COUNT_THRESHOLD
+
+
+def filter_significant_blocked(effective_df: pd.DataFrame, effective_summary: pd.DataFrame, min_count: int = MIN_BLOCKED_VARIANT_COUNT) -> pd.DataFrame:
+    """Section B2 -- every line (control or not) has a long tail of
+    count<=5, near-full-length 'blocked' merged variants (missing just
+    1-11 stops out of 30-67) that are near-certainly one-off recording
+    noise, not real detours. Protest lines also have one or two dominant
+    real-detour variants (count in the dozens to hundreds) so the noise
+    is a minor contaminant there; control lines 14/15 have *no* dominant
+    variant at all -- their entire 'blocked' bucket is this noise. This
+    restricts blocked-variant eligibility to `count > min_count`, reusing
+    plot_variants_revised.RAW_COUNT_THRESHOLD's own "real enough to
+    matter" convention, WITHOUT touching variant_type_v2 itself (still
+    used unmodified by phases 06/08/09)."""
+    sig = effective_summary[effective_summary["count"] > min_count]
+    eligible = set(zip(sig["route_name"], sig["direction_group"], sig["route_variant_id"]))
+
+    keys = list(zip(effective_df["route_name"], effective_df["direction_group"], effective_df["route_variant_id"]))
+    is_blocked = effective_df["variant_type_v2"] == "blocked"
+    keep = [(not b) or (k in eligible) for b, k in zip(is_blocked, keys)]
+    return effective_df[keep].copy()
 
 
 def hour_medians(endpoints: pd.DataFrame) -> tuple[pd.Series, pd.Series]:
@@ -95,7 +124,7 @@ def plot_line_delta(line, baseline_ep: pd.DataFrame, blocked_ep: pd.DataFrame, o
 
 
 CROSS_LINE_ORDER = [17, 19, 22, 9, 97]
-CROSS_LINE_COLORS = {17: "#b30000", 19: "#e34a33", 22: "#fc8d59", 9: "#54278f", 97: "#9e9ac8"}
+CROSS_LINE_COLORS = config.LINE_COLORS  # section A -- single palette, defined once in config.py
 
 
 def plot_all_lines_delta(line_deltas: dict[int, pd.Series], out_path) -> None:
@@ -135,11 +164,127 @@ def plot_all_lines_delta(line_deltas: dict[int, pd.Series], out_path) -> None:
     plt.close(fig)
 
 
+# ---------------------------------------------------------------------------
+# Section F (revision round 3) -- line 97 detour-distance figure
+# ---------------------------------------------------------------------------
+
+DETOUR_DISTANCE_HEADLINE_LINE = 97
+DETOUR_DISTANCE_OTHER_LINES = [9, 17, 19, 22]
+
+
+def dominant_blocked_variant(effective_summary: pd.DataFrame, route_name: int) -> pd.Series:
+    """The largest-count merged 'blocked' variant for a line -- its real,
+    well-supported detour, as opposed to the count<=5 noise filtered out
+    of the delta figures above (section B)."""
+    sub = effective_summary[(effective_summary["route_name"] == route_name) & (effective_summary["variant_type_v2"] == "blocked")]
+    return sub.loc[sub["count"].idxmax()]
+
+
+def variant_distance_curve(effective_df: pd.DataFrame, route_name: int, direction_group: str, route_variant_id: int) -> pd.Series:
+    sub = effective_df[
+        (effective_df["route_name"] == route_name)
+        & (effective_df["direction_group"] == direction_group)
+        & (effective_df["route_variant_id"] == route_variant_id)
+    ]
+    return sub.groupby("stop_sequence")["mean_cumulative_distance_m"].mean().sort_index()
+
+
+def draw_distance_panel(ax, baseline_curve: pd.Series, detour_curve: pd.Series, title: str, annotate: bool = True) -> dict:
+    base_km = baseline_curve.values / 1000
+    det_km = detour_curve.values / 1000
+    ax.plot(range(len(base_km)), base_km, color="#4C72B0", linewidth=2, marker="o", markersize=3, label="Baseline route")
+    ax.plot(range(len(det_km)), det_km, color="#d62728", linewidth=2, marker="o", markersize=3, label="Detour (blocked) route")
+    ax.set_title(title, fontsize=10, fontweight="bold")
+    ax.grid(alpha=0.3)
+
+    end_base, end_det = base_km[-1], det_km[-1]
+    delta_km = end_det - end_base
+    delta_pct = 100 * delta_km / end_base
+    if annotate:
+        ax.text(
+            0.03, 0.97, f"{delta_km:+.2f} km ({delta_pct:+.1f}%)",
+            transform=ax.transAxes, ha="left", va="top", fontsize=9, fontweight="bold",
+            bbox=dict(boxstyle="round,pad=0.3", facecolor="white", edgecolor="grey", alpha=0.9),
+        )
+    return {"end_baseline_km": round(end_base, 2), "end_detour_km": round(end_det, 2), "delta_km": round(delta_km, 2), "delta_pct": round(delta_pct, 1)}
+
+
+def run_detour_distance(effective_df: pd.DataFrame, effective_summary: pd.DataFrame) -> dict:
+    stats: dict[int, dict] = {}
+
+    # Headline: line 97
+    line = DETOUR_DISTANCE_HEADLINE_LINE
+    blocked_row = dominant_blocked_variant(effective_summary, line)
+    direction = blocked_row["direction_group"]
+    baseline_id = int(effective_summary.loc[
+        (effective_summary["route_name"] == line) & (effective_summary["direction_group"] == direction) & (effective_summary["is_reference"]),
+        "route_variant_id",
+    ].iloc[0])
+    baseline_curve = variant_distance_curve(effective_df, line, direction, baseline_id)
+    detour_curve = variant_distance_curve(effective_df, line, direction, int(blocked_row["route_variant_id"]))
+
+    line_dir = OUT_DIR / f"line_{line}"
+    line_dir.mkdir(parents=True, exist_ok=True)
+    headline_path = line_dir / "detour_distance.png"
+
+    fig, ax = plt.subplots(figsize=(9, 5.5))
+    row_stats = draw_distance_panel(ax, baseline_curve, detour_curve, "")
+    ax.set_title(f"Line {line} ({direction}): Cumulative Distance -- Baseline vs. Detour Route", fontsize=12, fontweight="bold")
+    ax.set_xlabel("Stop sequence (route order)")
+    ax.set_ylabel("Cumulative distance (km)")
+    ax.legend(fontsize=9)
+    fig.text(
+        0.5, -0.05,
+        f"How to read: cumulative distance stop-by-stop along line {line}'s baseline route (n={int(effective_summary.loc[(effective_summary['route_name']==line)&(effective_summary['direction_group']==direction)&(effective_summary['is_reference']),'count'].iloc[0]):,} "
+        f"blocks) vs. its dominant detour/blocked variant (n={int(blocked_row['count']):,} blocks); the detour ends "
+        f"{row_stats['delta_km']:+.2f} km ({row_stats['delta_pct']:+.1f}%) relative to the baseline's "
+        f"{row_stats['end_baseline_km']:.1f} km end-to-end distance -- line 97's blockade delay "
+        "(docs/05_skip_comparison/README.md) is disproportionate to this extra distance, so most of the delay is "
+        "congestion/signal time on the detour, not sheer extra length.",
+        ha="center", va="top", fontsize=8, wrap=True,
+    )
+    fig.savefig(headline_path, dpi=120, bbox_inches="tight")
+    plt.close(fig)
+    print(f"Saved -> {headline_path}  ({row_stats})")
+    stats[line] = {"direction_group": direction, **row_stats}
+
+    # Small multiples: other blocked lines, for context
+    other_lines = [l for l in DETOUR_DISTANCE_OTHER_LINES if l in effective_summary.loc[effective_summary["variant_type_v2"] == "blocked", "route_name"].unique()]
+    fig2, axes = plt.subplots(1, len(other_lines), figsize=(4.2 * len(other_lines), 4.2))
+    if len(other_lines) == 1:
+        axes = [axes]
+    for ax2, l in zip(axes, other_lines):
+        blocked_row_l = dominant_blocked_variant(effective_summary, l)
+        direction_l = blocked_row_l["direction_group"]
+        baseline_id_l = int(effective_summary.loc[
+            (effective_summary["route_name"] == l) & (effective_summary["direction_group"] == direction_l) & (effective_summary["is_reference"]),
+            "route_variant_id",
+        ].iloc[0])
+        baseline_curve_l = variant_distance_curve(effective_df, l, direction_l, baseline_id_l)
+        detour_curve_l = variant_distance_curve(effective_df, l, direction_l, int(blocked_row_l["route_variant_id"]))
+        row_stats_l = draw_distance_panel(ax2, baseline_curve_l, detour_curve_l, f"Line {l} ({direction_l})")
+        stats[l] = {"direction_group": direction_l, **row_stats_l}
+
+    axes[0].set_ylabel("Cumulative distance (km)")
+    handles, labels = axes[0].get_legend_handles_labels()
+    fig2.legend(handles, labels, loc="lower center", ncol=2, fontsize=9, bbox_to_anchor=(0.5, -0.05))
+    fig2.suptitle("Cumulative Distance, Baseline vs. Dominant Detour Route -- Other Blocked Lines (Context)", fontsize=12, fontweight="bold")
+    fig2.text(0.5, -0.12, "How to read: same comparison as line 97's headline panel, one dominant blocked/detour variant per line, for context.", ha="center", fontsize=8, wrap=True)
+    fig2.tight_layout(rect=[0, 0.05, 1, 0.95])
+    other_path = OUT_DIR / "detour_distance_all_lines.png"
+    fig2.savefig(other_path, dpi=120, bbox_inches="tight")
+    plt.close(fig2)
+    print(f"Saved -> {other_path}")
+
+    return stats
+
+
 def run() -> None:
     OUT_DIR.mkdir(parents=True, exist_ok=True)
     df_cleaned = pd.read_csv(config.DF_CLEANED_PATH, low_memory=False)
     variant_summary = pd.read_csv(config.VARIANT_SUMMARY_PATH)
-    effective_df, _ = vm.build_effective_df_cleaned(df_cleaned, variant_summary)
+    effective_df_all, effective_summary = vm.build_effective_df_cleaned(df_cleaned, variant_summary)
+    effective_df = filter_significant_blocked(effective_df_all, effective_summary)
     endpoints = pa.block_endpoints(effective_df)
 
     summary_rows = []
@@ -169,6 +314,9 @@ def run() -> None:
     cross_line_path = OUT_DIR / "delta_all_lines.png"
     plot_all_lines_delta(line_deltas, cross_line_path)
     print(f"Saved -> {cross_line_path}")
+
+    distance_stats = run_detour_distance(effective_df_all, effective_summary)
+    print(f"Detour-distance stats: {distance_stats}")
 
 
 if __name__ == "__main__":

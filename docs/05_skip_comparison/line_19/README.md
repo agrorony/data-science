@@ -2,11 +2,12 @@
 
 Method and headline finding: [docs/05_skip_comparison](../README.md).
 
-**n=203 blocked vs n=2,191 baseline blocks (pooled directions) — the
+**n=183 blocked vs n=2,191 baseline blocks (pooled directions, after the
+round-3 count>5 significance floor — see main README section B2) — the
 largest blocked sample of any line; overall median delta: −8.7 min.**
-Only 8 of 20 hours are thin, the best hour-by-hour coverage in this
-phase; the delta curve is consistently negative except a small positive
-blip around hour 15 (see `baseline_vs_blocked_delta.png`).
+9 of 20 hours are thin, still among the best hour-by-hour coverage in
+this phase; the delta curve is consistently negative except a small
+positive blip around hour 15 (see `baseline_vs_blocked_delta.png`).
 
 **Answer:** line 19's blocked/special variant saves time overall — the
 best-supported result in this phase, consistent with

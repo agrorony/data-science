@@ -7,6 +7,30 @@ per that round's global rule. Confirmed by diffing
 the pre-round-2 committed versions: byte-identical, so none of the
 numbers or findings below changed.
 
+**Revision round 3 (section G):** the two separate per-line delta
+figures are replaced by **one combined figure**,
+`control_lines_delta.png`, with both lines' curves on shared axes
+(colors from the project palette, `pipeline.config.LINE_COLORS` —
+`docs/README.md`), one legend, one zero line, shared Saturday-hour
+shading. This is a display-only change — `control_comparison_stats.csv`
+and `blockade_windows_used.csv` are confirmed unchanged (diffed again
+after rerunning), so every number and finding below still stands. Worth
+noting from the combined view: lines 14 and 15's delta curves track each
+other closely across most of the day (both peak around 14:00–15:00 at
+roughly the same magnitude), which is consistent with a shared
+citywide daytime-traffic pattern rather than anything specific to the
+Aza-corridor closure.
+
+**Revision round 4:** line 14's 14 flagged slots were reclassified from
+`"blocked"` to `"noise"` ([docs/06_blockade_frequency/line_14](../06_blockade_frequency/line_14/README.md))
+after being confirmed as stop-recording dropouts. **This phase is
+unaffected — verified byte-identical** (`control_comparison_stats.csv`,
+`blockade_windows_used.csv` diffed before/after): blockade windows are
+built only from lines 17/19/22 (`SOURCE_LINES`), never line 14, so its
+former "blocked" slots never leaked into the window definition; line
+14's own control-group stats use only its `variant_type_v2 ==
+"reference"` blocks, untouched by the reclassification.
+
 **Revision round (sections C, G): this phase has been rebuilt.** Both
 directions of line 14 are now pooled into one distribution (line 15
 already had no direction split); only the delta chart is kept (the
@@ -74,7 +98,7 @@ distort a pooled comparison, so it's reported but not primary).
 **Neither control line shows a clearly significant effect under the new
 windows.** Line 14's Weekday stratum shows the same *direction* as the
 first pass (blockade windows slower, +0.8 min) and the underlying hourly
-chart (`line_14_hourly_pattern.png`) still shows a visible daytime
+chart (`control_lines_delta.png`) still shows a visible daytime
 pattern (+2 to +8 min through midday/afternoon hours, near zero in the
 evening) — but the rank-based Mann-Whitney test is only borderline
 (p=0.071) and the Welch t-test is significant (p=0.006) — **the two
@@ -105,4 +129,5 @@ but should now be described as suggestive, not confirmed.
 [docs/04_baselines](../04_baselines/README.md),
 [docs/06_blockade_frequency](../06_blockade_frequency/README.md),
 [docs/07_blockade_investigation](../07_blockade_investigation/README.md),
-`pipeline/variant_merges.py`, `pipeline/plot_control_comparison.py`.
+`pipeline/variant_merges.py`, `pipeline/config.py`,
+`pipeline/plot_control_comparison.py`.

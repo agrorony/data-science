@@ -1,5 +1,12 @@
 # 09 — Lines 9 and 97 During Confirmed Aza-Corridor Blockade Windows
 
+**Revision round 4:** line 14's reclassification to `"noise"`
+([docs/06_blockade_frequency/line_14](../06_blockade_frequency/line_14/README.md))
+does not touch this phase at all — line 14 never appears here, and the
+320-slot window table it reuses from docs/08 is built only from lines
+17/19/22. Verified unchanged (`variant_share_stats.csv`,
+`travel_time_stats.csv` diffed before/after this round: byte-identical).
+
 **Revision round (sections C, H): rebuilt** on the merged/excluded
 variant set and the new absolute >15-stop blocked rule
 ([docs/07's addendum](../07_blockade_investigation/README.md)), **both
@@ -10,6 +17,11 @@ directions of each line pooled** (section C), and reusing the **updated
 grew). Figure style is unchanged (variant-share bar chart + travel-time
 boxplot grid), now with one pooled panel per line instead of one panel
 per direction.
+
+**Revision round 3 (section H):** the two `line_<N>_blockade_delta.png`
+figures' legends were overlapping the data (most visibly line 9's blue
+curve near hour 17) — moved outside the axes (`bbox_to_anchor`), no
+other change.
 
 **Revision round 2 (section D):** line 97's new exclusion
 ([docs/03_variants](../03_variants/README.md), direction B variant 2,
