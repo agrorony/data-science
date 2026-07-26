@@ -2,7 +2,9 @@
 Course 71253, final report due **1 Aug 2026** (today: 23 Jul — 9 days left).
 Format: Word or PDF, **≤10 pages including figures**, font ≥11, line spacing ≥1.15, margins ≥1", figures numbered + titled with their main message, no code, informative variable names.
 
-This maps the course's required sections onto the work already done in `docs/01`–`docs/09`, and proposes a page budget, figure picks, and a split between the two of you. Source doc for all content below: `docs/README.md` and the numbered phase folders.
+This maps the course's required sections onto the work already done in `docs/`, and proposes a page budget, figure picks, and a split between the two of you. Source doc for all content below: `docs/README.md` and the numbered phase folders.
+
+**Docs folder restructured (26 Jul):** phases 07, 10, and 11 were archived (moved to `../archive/docs/`, not deleted) — phase 07's "when do blockades happen" question is now answered by the new **`docs/13_full_year_calendar`** instead. A new **`docs/12_statistics`** phase adds rigorous statistical backing (permutation tests + bootstrap CIs + Cliff's delta, one reusable test engine) on top of the simpler tests already used in phases 05/06/08/09 — cite `docs/12`'s numbers as the primary evidence wherever a subsection has one (they're more rigorous: day/hour-stratified, not thrown off by Saturday/weekday composition the way a plain pooled test can be), and the phase's own Mann-Whitney/Welch numbers as supporting detail. Also: a late correctness fix (`fix_22b_central_prompt.md`) changed several already-reported numbers in docs/05/06/08/09/12/13 — **Section 3.3 in the draft has already been corrected for this; if you're picking up numbers from docs/ directly for 3.1/3.2/3.4, use the current file contents, not anything quoted earlier in this chat.**
 
 ---
 
@@ -43,14 +45,14 @@ Four sub-parts, each 2-4 sentences of narrative, not the full decision-log detai
 
 Split into 4 sub-questions, each its own short subsection (state question → method in prose → 1 figure → conclusion), following the course's recommended subsection format:
 
-| # | Question | Method (from) | Figure |
-|---|---|---|---|
-| Q1 | When during the year do blockades happen, and how consistent is the pattern? | `docs/13_full_year_calendar` | `confirmed_hours_calendar.png` |
-| Q2 | When a line's bus detours around a blockade, is the detour actually slower than the normal route? | `docs/05_skip_comparison` | `delta_all_lines.png` |
-| Q3 | Do blockades ripple onto lines that don't even run through the blocked street? (control lines 14 & 15) | `docs/08_control_lines_15_14` | one control-line hourly-pattern figure |
-| Q4 | Lines 9 & 97 share the corridor but not the exact blocked segment — do they reroute, run late, or both? | `docs/09_lines_9_97` | `line_9_blockade_delta.png` or `line_97_blockade_delta.png` |
+| # | Question | Method (from) | Figure | Statistical backing (`docs/12`) |
+|---|---|---|---|---|
+| Q1 | When during the year do blockades happen, and how consistent is the pattern? | `docs/06_blockade_frequency` + `docs/13_full_year_calendar` | `confirmed_hours_calendar.png` (or `blockade_all_lines.png`) | n/a — descriptive/frequency phase, not a hypothesis test |
+| Q2 | When a line's bus detours around a blockade, is the detour actually slower than the normal route? | `docs/05_skip_comparison` | `delta_all_lines.png` | all 5 lines' savings statistically supported, p ≤ 0.005, Cliff's δ small–large |
+| Q3 | Do blockades ripple onto lines that don't even run through the blocked street? (control lines 14 & 15) | `docs/08_control_lines_15_14` | `control_lines_delta.png` | **done** — both lines null: Δ≈−1.2/−0.4 min, CI includes 0, p=0.97–0.998 |
+| Q4 | Lines 9 & 97 share the corridor but not the exact blocked segment — do they reroute, run late, or both? | `docs/09_lines_9_97` | `line_9_blockade_delta.png` or `line_97_blockade_delta.png` | route-switching supported both lines (p<0.001); line 9 time effect suggestive only, line 97's small speed-up (−1.2 min) supported (p=0.005) |
 
-Each conclusion should state the finding in plain language with the number attached, e.g. "line 9 is delayed by 11.7 minutes on Saturdays during blockade windows (p=0.010)" — the actual verified numbers are already in the `docs/08` and `docs/09` READMEs, just need shortening into report prose (drop the two-round revision history — the report only needs the final, current numbers).
+Each conclusion should state the finding in plain language with the number attached, e.g. "line 9 is delayed by 11.7 minutes on Saturdays during blockade windows (p=0.010, docs/09)" — pull current numbers straight from the `docs/05`, `docs/08`, `docs/09`, and `docs/12` READMEs, not from earlier chat messages (several numbers changed with the 26 Jul correctness fix). Drop the revision-round history when writing — the report only needs the final, current numbers and a one-line method description, not how they evolved.
 
 ---
 
