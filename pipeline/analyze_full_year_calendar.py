@@ -39,8 +39,7 @@ import pandas as pd
 
 from pipeline import config, variant_merges as vm
 from pipeline.analyze_deep_dive_windows import (
-    DAY_LABELS, MONTH_LABELS, BLOCK_KEYS, load_data, build_footprints, missing_stops,
-    VT_COLORS, VT_CODE, MIN_N_RELIABLE,
+    DAY_LABELS, MONTH_LABELS, BLOCK_KEYS, load_data, build_footprints, MIN_N_RELIABLE,
 )
 
 DAY_ORDER = list(DAY_LABELS.values())
@@ -471,7 +470,8 @@ def plot_calendar_grid(calendar_df: pd.DataFrame, long_df: pd.DataFrame, out_pat
         day_idx = DAY_ORDER.index(row["day_label"])
         month_idx = row["month"] - 1
         if row["status"] == "confirmed":
-            grid_status.iloc[day_idx, month_idx] = row["confirmed_hour_ranges"].split(";")[0].strip()
+            ranges = [r.strip() for r in row["confirmed_hour_ranges"].split(";")]
+            grid_status.iloc[day_idx, month_idx] = "\n".join(ranges)
             grid_color[day_idx, month_idx] = 2
         else:
             reason = "artifact" if row["documented_elsewhere"] and "docs/06" in row["documented_reason"] else (
@@ -481,7 +481,7 @@ def plot_calendar_grid(calendar_df: pd.DataFrame, long_df: pd.DataFrame, out_pat
             grid_color[day_idx, month_idx] = 1
 
     cmap = ListedColormap(["#f7f7f7", "#fddbc7", "#d62728"])
-    fig, ax = plt.subplots(figsize=(13, 5))
+    fig, ax = plt.subplots(figsize=(13, 6.5))
     ax.imshow(grid_color, cmap=cmap, vmin=0, vmax=2, aspect="auto")
     ax.set_xticks(range(len(MONTH_ORDER)))
     ax.set_xticklabels(MONTH_LABELS)
@@ -491,7 +491,8 @@ def plot_calendar_grid(calendar_df: pd.DataFrame, long_df: pd.DataFrame, out_pat
         for j in range(len(MONTH_ORDER)):
             txt = grid_status.iloc[i, j]
             if txt:
-                ax.text(j, i, txt, ha="center", va="center", fontsize=7.5,
+                fontsize = 6.5 if txt.count("\n") >= 2 else 7.5
+                ax.text(j, i, txt, ha="center", va="center", fontsize=fontsize,
                         color="white" if grid_color[i, j] == 2 else "black")
     ax.set_title(
         "Phase 13 -- Confirmed-Hours Calendar (relaxed scan: >=3 lines, share > 10%)",
@@ -530,8 +531,22 @@ def part_a():
     print(f"\nFlagged {len(flagged)} cells (relaxed rule: >=3 lines, share > 10%):")
     print(flagged[["month_label", "day_label", "n_lines_elevated", "lines_elevated", "documented_reason"]].to_string(index=False))
 
-    return effective_df, effective_summary, variant_summary, blocks, flagged
+    return effective_df, effective_summary, variant_summary, blocks, flagged, long_df
+
+
+def part_c_control_sanity(blocks: pd.DataFrame):
+    """Sanity check (same as phases 10/11): control lines 14/15 should
+    never be flagged, let alone confirmed, anywhere on the calendar."""
+    print("\n=== Control-line sanity check (14/15, full year) ===")
+    for line in [14, 15]:
+        sub = blocks[blocks["route_name"] == line]
+        n_blocked = (sub["variant_type_v2"] == "blocked").sum()
+        print(f"Line {line}: {n_blocked} blocked slots out of {len(sub)} project-wide "
+              f"({n_blocked/len(sub):.2%}) -- should never independently clear the >10% cell-share bar")
 
 
 if __name__ == "__main__":
-    part_a()
+    effective_df, effective_summary, variant_summary, blocks, flagged, long_df = part_a()
+    calendar_df, anomaly_df = part_b(effective_df, effective_summary, variant_summary, blocks, flagged)
+    plot_calendar_grid(calendar_df, long_df, OUT_DIR / "confirmed_hours_calendar.png")
+    part_c_control_sanity(blocks)

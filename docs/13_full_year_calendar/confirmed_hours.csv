@@ -1,0 +1,22 @@
+month,month_label,day_label,lines_elevated,status,confirmed_hour_ranges,documented_elsewhere,documented_reason,n_impure_blocked_candidates,n_lowN_blocked_candidates
+1,Jan,Sat,"[9, 17, 19, 22, 97]",confirmed,19-22h,True,"Saturday pattern already documented in docs/06_blockade_frequency (see disagreement_deep_dive.md for the line 22B nuance, now fixed centrally)",0,0
+2,Feb,Sat,"[9, 17, 19, 22, 97]",confirmed,19-22h,True,"Saturday pattern already documented in docs/06_blockade_frequency (see disagreement_deep_dive.md for the line 22B nuance, now fixed centrally)",0,0
+3,Mar,Sat,"[9, 17, 19, 22, 97]",confirmed,21-24h,True,"Saturday pattern already documented in docs/06_blockade_frequency (see disagreement_deep_dive.md for the line 22B nuance, now fixed centrally)",0,5
+4,Apr,Sat,"[9, 17, 19, 22, 97]",confirmed,22-24h,True,"Saturday pattern already documented in docs/06_blockade_frequency (see disagreement_deep_dive.md for the line 22B nuance, now fixed centrally)",0,1
+5,May,Mon,"[9, 15, 17, 19, 22]",confirmed,7-15h; 18-20h,False,not previously examined at hour level,0,5
+5,May,Sat,"[9, 17, 19, 22, 97]",confirmed,21-24h,True,"Saturday pattern already documented in docs/06_blockade_frequency (see disagreement_deep_dive.md for the line 22B nuance, now fixed centrally)",0,2
+6,Jun,Sat,"[9, 17, 19, 22, 97]",confirmed,21-24h,True,"Saturday pattern already documented in docs/06_blockade_frequency (see disagreement_deep_dive.md for the line 22B nuance, now fixed centrally)",0,3
+7,Jul,Sat,"[9, 17, 19, 22, 97]",confirmed,21-24h,True,"Saturday pattern already documented in docs/06_blockade_frequency (see disagreement_deep_dive.md for the line 22B nuance, now fixed centrally)",0,1
+8,Aug,Sat,"[9, 17, 19, 22, 97]",confirmed,21-24h,True,"Saturday pattern already documented in docs/06_blockade_frequency (see disagreement_deep_dive.md for the line 22B nuance, now fixed centrally)",0,0
+9,Sep,Sat,"[9, 17, 19, 22, 97]",confirmed,20-24h,True,"Saturday pattern already documented in docs/06_blockade_frequency (see disagreement_deep_dive.md for the line 22B nuance, now fixed centrally)",0,1
+10,Oct,Sat,"[9, 17, 19, 22, 97]",confirmed,20-24h,True,"Saturday pattern already documented in docs/06_blockade_frequency (see disagreement_deep_dive.md for the line 22B nuance, now fixed centrally)",0,1
+11,Nov,Sat,"[9, 17, 19, 22, 97]",confirmed,19-23h,True,"Saturday pattern already documented in docs/06_blockade_frequency (see disagreement_deep_dive.md for the line 22B nuance, now fixed centrally)",0,3
+11,Nov,Wed,"[9, 17, 19, 22, 97]",confirmed,10-22h,True,hour-level deep dive already done in docs/11_deep_dive_candidate_windows/README.md,0,1
+12,Dec,Wed,"[9, 17, 19, 22, 97]",confirmed,13-18h,True,hour-level deep dive already done in docs/11_deep_dive_candidate_windows/README.md,0,0
+5,May,Tue,"[9, 17, 19, 22]",confirmed,9-12h; 13-15h; 21h,False,not previously examined at hour level,0,7
+6,Jun,Mon,"[9, 17, 19, 22]",confirmed,22h,False,not previously examined at hour level,0,4
+10,Oct,Mon,"[9, 17, 19, 22]",confirmed,8h; 13h,True,hour-level deep dive already done in docs/11_deep_dive_candidate_windows/README.md,0,4
+4,Apr,Mon,"[17, 19, 22]",confirmed,7h,False,not previously examined at hour level,0,4
+4,Apr,Thu,"[17, 19, 22]",confirmed,6-8h,False,not previously examined at hour level,0,3
+4,Apr,Wed,"[17, 19, 22]",confirmed,23h,False,not previously examined at hour level,0,3
+5,May,Sun,"[17, 19, 22]",confirmed,6-8h; 9h,False,not previously examined at hour level,0,2

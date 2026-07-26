@@ -232,6 +232,20 @@ shifted — only the two new blues for 14/15 are new.
     their captions; nothing else about them changed. Numbered `12` rather
     than `10` because phase 10 (candidate windows) had already claimed
     that slot by the time this phase was built.
+13. **[Full-year blockade calendar](13_full_year_calendar/README.md)**
+    *(new)* — redoes and broadens phases 10/11's scan under a simpler,
+    relaxed rule (≥3 lines independently >10% blocked-share, no
+    saturation/baseline/n-floor exclusions), flagging 21 (month,
+    day-of-week) cells across the year, then runs the hour-level
+    confirmation method on every one of them (no manual approval gate).
+    Converts each flagged cell's share into a plain confirmed-hour-range
+    answer using a strict per-hour rule (≥3 lines simultaneously pure,
+    n≥8, and blocked). All three of phase 11's cells reappear with
+    consistent (reconciled, not contradictory) confirmed ranges; 11
+    Saturdays confirm the already-known 19:00–24:00-ish evening pattern;
+    7 new weekday cells (May Mon/Tue/Sun, Jun Mon, Apr Mon/Wed/Thu) are
+    confirmed for the first time. Numbered `13` because `12` was already
+    taken by the statistics phase.
 
 ## What changed numerically, first pass → this revision
 
