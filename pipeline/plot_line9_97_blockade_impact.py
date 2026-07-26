@@ -362,7 +362,7 @@ def plot_own_vs_absorbed_delta(line_label: str, route_name: int, effective_df: p
     ax.set_xlabel("Hour of day")
     ax.set_ylabel("Extra travel time (min)")
     ax.set_title(f"{line_label}: Own Detour vs. Staying on Route During Others' Blockades", fontsize=12, fontweight="bold")
-    ax.legend(fontsize=8, loc="best")
+    ax.legend(fontsize=8, loc="upper left", bbox_to_anchor=(1.02, 1), borderaxespad=0)
     ax.grid(True, alpha=0.3)
 
     n_own_blocked, n_own_baseline = len(blocked_ep), len(baseline_ep)

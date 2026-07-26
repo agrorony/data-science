@@ -127,43 +127,58 @@ def compare_groups(tagged: pd.DataFrame, label: str) -> list[dict]:
     return rows
 
 
-def plot_hourly_delta(tagged: pd.DataFrame, out_path, title: str, stats_rows: list[dict]) -> None:
-    """Delta-chart-only version (section G): just the top panel of the
-    original two-panel figure -- per-hour gap, dashed zero line, grey
-    shading over Saturday-only window hours."""
+def compute_hourly_delta(tagged: pd.DataFrame) -> tuple[pd.Series, list]:
+    """Per-hour median-travel-time gap (blockade minus matched normal) and
+    the Saturday-only window hours, shared by all control lines' curves in
+    the combined figure below (section G)."""
     agg = (
         tagged.groupby(["hour_display", "group"])["mean_cumulative_travel_time_min"]
         .median()
         .unstack()
     )
     sat_hours = sorted(tagged.loc[tagged["category"] == "Saturday", "hour_display"].unique())
-
-    fig, ax = plt.subplots(figsize=(10, 5.5))
-
+    delta = pd.Series(dtype=float)
     if "blockade" in agg.columns and "matched_normal" in agg.columns:
         delta = (agg["blockade"] - agg["matched_normal"]).dropna().sort_index()
-        ax.plot(delta.index, delta.values, color="#d62728", linewidth=2.5, marker="o", markersize=5, label="Blockade window minus matched normal")
-    ax.axhline(0, color="black", linewidth=1, linestyle="--", alpha=0.6)
+    return delta, sat_hours
 
+
+def plot_combined_control_delta(results: dict[str, dict], out_path) -> None:
+    """Section G (revision round 3) -- both control lines' delta curves
+    on one shared figure (replaces the two separate per-line PNGs),
+    palette from config.LINE_COLORS (section A)."""
+    fig, ax = plt.subplots(figsize=(10, 5.5))
+
+    all_sat_hours: set = set()
+    for r in results.values():
+        all_sat_hours |= set(r["sat_hours"])
     band_labeled = False
-    for hr in sat_hours:
+    for hr in sorted(all_sat_hours):
         ax.axvspan(hr - 0.4, hr + 0.4, color="grey", alpha=0.18, zorder=0, label="Saturday-only window hour" if not band_labeled else "")
         band_labeled = True
 
+    for label, r in results.items():
+        if r["delta"].empty:
+            continue
+        color = config.LINE_COLORS[r["route_name"]]
+        ax.plot(r["delta"].index, r["delta"].values, color=color, linewidth=2.5, marker="o", markersize=5, label=f"{label}: blockade minus matched normal")
+
+    ax.axhline(0, color="black", linewidth=1, linestyle="--", alpha=0.6)
     ax.set_xlabel("Hour of day")
     ax.set_ylabel("Extra travel time in blockade window (min)")
-    ax.set_title(title, fontsize=12, fontweight="bold")
+    ax.set_title("Control Lines 14 & 15: Travel-Time Delta, Confirmed Blockade Window vs Matched Normal", fontsize=12, fontweight="bold")
     ax.legend(fontsize=9)
     ax.grid(True, alpha=0.3)
 
-    combined = next(r for r in stats_rows if r["category"] == "Combined")
-    p_str = f"{combined['mwu_p']:.3f}" if not np.isnan(combined["mwu_p"]) else "n/a (insufficient n)"
+    caption_parts = []
+    for label, r in results.items():
+        combined = next(x for x in r["stats_rows"] if x["category"] == "Combined")
+        p_str = f"{combined['mwu_p']:.3f}" if not np.isnan(combined["mwu_p"]) else "n/a (insufficient n)"
+        caption_parts.append(f"{label}: n={combined['n_blockade']} blockade vs n={combined['n_normal']} matched-normal, MWU p={p_str}")
     caption = (
-        f"How to read: per-hour median-travel-time gap between confirmed Aza-corridor blockade-window months "
-        f"(lines 17/19/22, either direction, new >15-stop blocked rule) and matched normal months at the same "
-        f"day-of-week/hour, both directions of this control line pooled. Combined (all flagged hours pooled): "
-        f"n={combined['n_blockade']} blockade blocks vs n={combined['n_normal']} matched-normal blocks, "
-        f"Mann-Whitney U p={p_str}."
+        "How to read: per-hour median-travel-time gap between confirmed Aza-corridor blockade-window months "
+        "(lines 17/19/22, either direction, new >15-stop blocked rule) and matched normal months at the same "
+        "day-of-week/hour, both directions of each control line pooled. " + "; ".join(caption_parts) + "."
     )
     fig.text(0.5, -0.05, caption, ha="center", fontsize=8, wrap=True)
     fig.savefig(out_path, dpi=120, bbox_inches="tight")
@@ -183,16 +198,19 @@ def run() -> None:
     targets = [("Line 15", 15), ("Line 14", 14)]
 
     stats_rows: list[dict] = []
+    results: dict[str, dict] = {}
     for label, route_name in targets:
         blocks = load_baseline_blocks(effective_df, route_name, config.LOW_CONFIDENCE_THRESHOLD)
         tagged = tag_windows(blocks, windows)
         label_stats = compare_groups(tagged, label)
         stats_rows.extend(label_stats)
 
-        title = f"{label}: Travel-Time Delta, Confirmed Blockade Window vs Matched Normal (Both Directions Pooled)"
-        out_path = OUT_DIR / f"{label.lower().replace(' ', '_')}_hourly_pattern.png"
-        plot_hourly_delta(tagged, out_path, title, label_stats)
-        print(f"Saved -> {out_path}")
+        delta, sat_hours = compute_hourly_delta(tagged)
+        results[label] = {"route_name": route_name, "delta": delta, "sat_hours": sat_hours, "stats_rows": label_stats}
+
+    combined_path = OUT_DIR / "control_lines_delta.png"
+    plot_combined_control_delta(results, combined_path)
+    print(f"Saved -> {combined_path}")
 
     stats_df = pd.DataFrame(stats_rows)
     stats_csv = OUT_DIR / "control_comparison_stats.csv"
