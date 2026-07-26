@@ -173,6 +173,23 @@ LINE_COLORS: dict[int, str] = {
     14: "#045a8d", 15: "#74a9cf",
 }
 
+# fix_22b_central_prompt.md -- line 22 direction_B never runs a corridor
+# detour (pipeline.variant_merges.LINE_22_NON_CORRIDOR_DIRECTION forces its
+# non-reference variants to "non_corridor", not "blocked", centrally). Any
+# figure/stat that reports line 22's blockade share/rate as a single
+# pooled-both-directions number is still diluted by direction_B's full,
+# untouched-by-the-closure schedule sitting in the denominator -- so every
+# such aggregate must be computed from direction_A only (round 4 decision;
+# see docs/06_blockade_frequency/disagreement_deep_dive.md). Figures that
+# legitimately show direction_A and direction_B as separate rows/columns
+# (e.g. the Saturday timeline, the per-slot disagreement windows) are NOT
+# an "aggregate" in this sense and don't use this constant.
+LINE_22_SHARE_DIRECTION = "direction_A"
+LINE_22_DIR_A_FOOTNOTE = (
+    "Line 22 computed from direction A only; direction B excluded (non-corridor "
+    "variants -- see docs/06_blockade_frequency/disagreement_deep_dive.md)."
+)
+
 LINES: list[str] = sorted(load_target_route_ids().keys(), key=lambda x: (len(x), x))
 ROUTE_ID_TO_LINE: dict[int, str] = build_route_id_to_line()
 MULTI_ROUTE_ID_LINES: list[str] = [

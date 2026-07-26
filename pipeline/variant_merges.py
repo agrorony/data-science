@@ -45,6 +45,23 @@ BLOCKED_STOP_THRESHOLD = 15
 # need no line-14 special case of their own).
 LINE_14_NO_BLOCKED = 14
 
+# fix_22b_central_prompt.md -- line 22 direction_B's non-reference variants
+# (id 1, n=112 project-wide; id 4, n=3) differ from its reference route by a
+# single off-corridor stop swap (stop 6028, sometimes also 4175) -- they
+# touch 0 of the 9 corridor-footprint stops (disagreement_deep_dive.md,
+# Hypothesis 1; docs/11_deep_dive_candidate_windows/README.md Part B
+# independently reached the same conclusion for December). This is a
+# *different* reason than line 14's (a real, identified, but irrelevant
+# route deviation, not a stop-recording dropout), so it gets its own label,
+# "non_corridor", rather than reusing "noise". Force these to "non_corridor"
+# instead of "blocked" so line 22 direction_B is never counted as blocked
+# anywhere project-wide -- every phase that reads variant_type_v2 (05, 06,
+# 08, 09, 10, 11, 12) inherits this with no per-script special case of its
+# own. Direction_A is untouched (its main non-reference variant is a real,
+# footprint-matching corridor detour).
+LINE_22_NON_CORRIDOR = 22
+LINE_22_NON_CORRIDOR_DIRECTION = "direction_B"
+
 
 def load_merge_config(path=None) -> dict:
     path = path or VARIANT_MERGES_PATH
@@ -113,11 +130,41 @@ def build_effective_variant_summary(variant_summary: pd.DataFrame, merge_config:
             return "reference"
         if int(r["route_name"]) == LINE_14_NO_BLOCKED:
             return "noise"
+        if int(r["route_name"]) == LINE_22_NON_CORRIDOR and r["direction_group"] == LINE_22_NON_CORRIDOR_DIRECTION:
+            return "non_corridor"
         return "blocked" if r["n_stops"] > BLOCKED_STOP_THRESHOLD else "regular"
 
     out = pd.DataFrame(rows)
     out["variant_type_v2"] = out.apply(_classify, axis=1)
     return out.sort_values(["route_name", "direction_group", "route_variant_id"]).reset_index(drop=True)
+
+
+def assert_no_false_blockades(effective_df: pd.DataFrame) -> None:
+    """Regression guard (fix_22b_central_prompt.md) -- line 14 and line 22
+    direction_B must never be `variant_type_v2 == "blocked"` anywhere. Both
+    decisions are enforced centrally above (`_classify`); this just fails
+    loudly, at build time, if a future edit to this file (or to
+    `govData/variant_merges.json`) accidentally reintroduces either as
+    blocked, instead of letting it silently resurface downstream the way
+    the 22B bug did in docs/11_deep_dive_candidate_windows."""
+    bad = effective_df[
+        (effective_df["variant_type_v2"] == "blocked")
+        & (
+            (effective_df["route_name"] == LINE_14_NO_BLOCKED)
+            | (
+                (effective_df["route_name"] == LINE_22_NON_CORRIDOR)
+                & (effective_df["direction_group"] == LINE_22_NON_CORRIDOR_DIRECTION)
+            )
+        )
+    ]
+    if not bad.empty:
+        offenders = sorted(set(zip(bad["route_name"], bad["direction_group"])))
+        raise AssertionError(
+            f"assert_no_false_blockades: found variant_type_v2 == 'blocked' rows for "
+            f"line/direction combos that must never be blocked: {offenders}. "
+            "This should be impossible given _classify's rules above -- check "
+            "govData/variant_merges.json for a stray merge/exclusion edit."
+        )
 
 
 def apply_merges(df: pd.DataFrame, raw_variant_summary: pd.DataFrame, merge_config: dict | None = None) -> pd.DataFrame:
@@ -162,4 +209,5 @@ def build_effective_df_cleaned(df_cleaned: pd.DataFrame | None = None, variant_s
     effective_summary = build_effective_variant_summary(variant_summary, merge_config)
     effective_df = apply_merges(df_cleaned, variant_summary, merge_config)
     effective_df = attach_variant_type_v2(effective_df, effective_summary)
+    assert_no_false_blockades(effective_df)
     return effective_df, effective_summary

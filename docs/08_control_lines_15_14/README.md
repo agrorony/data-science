@@ -21,6 +21,18 @@ roughly the same magnitude), which is consistent with a shared
 citywide daytime-traffic pattern rather than anything specific to the
 Aza-corridor closure.
 
+**fix_22b_central_prompt.md:** line 22 direction_B's non-reference variants
+are now forced to `"non_corridor"` (never `"blocked"`) centrally in
+`pipeline.variant_merges` — previously they leaked into this phase's window
+definition (`SOURCE_LINES = [17, 19, 22]`, either direction), inflating the
+Weekday window count from 112 (first pass) to 284. With direction_B's
+spurious slots removed, the Weekday window count drops to **172** (Saturday
+windows, 36, are unaffected — direction_B never drove a Saturday-only
+window). This changes every Weekday/Combined number in the table below
+(Saturday rows are untouched) and, notably, **resolves the Mann-Whitney/
+Welch disagreement flagged in the previous pass** — see "Verified
+conclusion" below.
+
 **Revision round 4:** line 14's 14 flagged slots were reclassified from
 `"blocked"` to `"noise"` ([docs/06_blockade_frequency/line_14](../06_blockade_frequency/line_14/README.md))
 after being confirmed as stop-recording dropouts. **This phase is
@@ -52,17 +64,18 @@ that exact slot. This is a straightforward generalization of the new
 rule — no per-line hand-tuning is needed anymore, unlike the first
 pass's hand-picked month/day windows.
 
-**This produces a much larger window set than the first pass: 320
-distinct slots (36 Saturday, 284 Weekday), vs. 112 in the original
-phase 08.** The new >15-stop rule labels far more of 17/19/22's raw
-variant activity as "blocked" than the old fraction rule did (see
-[docs/07's addendum](../07_blockade_investigation/README.md): 141 of
-155 merged variants project-wide, 91%, are now "blocked") — so the
-window set is not just "line 22's closure added in," it also picks up
-many more one-off, low-volume weekday deviations on lines 17/19 that
+**This produces a larger window set than the first pass: 208
+distinct slots (36 Saturday, 172 Weekday), vs. 112 in the original
+phase 08** (previously reported as 320/36/284 before `fix_22b_central_prompt.md`
+removed the slots direction_B's spurious "blocked" classification had been
+contributing — see the changelog note above). The new >15-stop rule labels
+far more of 17/19/22A's raw variant activity as "blocked" than the old
+fraction rule did (see [docs/07's addendum](../07_blockade_investigation/README.md)) —
+so the window set is not just "line 22's closure added in," it also picks up
+more one-off, low-volume weekday deviations on lines 17/19 that
 the old rule filtered out as "regular." **This is a real trade-off of
 the new rule, not a bug:** it makes the window definition mechanical
-and line-22-inclusive, at the cost of being noisier and less
+and line-22-inclusive, at the cost of being somewhat noisier and less
 specifically tied to the sustained Aza-corridor closure than the first
 pass's hand-verified windows.
 
@@ -87,41 +100,59 @@ distort a pooled comparison, so it's reported but not primary).
 | Line | Category | n blockade | n normal | Median blockade | Median normal | Δ (min) | Mann-Whitney p | Welch t p |
 |---|---|---|---|---|---|---|---|---|
 | 15 | Saturday | 33 | 12 | 52.9 | 52.0 | +0.9 | 0.376 (ns) | 0.353 (ns) |
-| 15 | Weekday | 265 | 854 | 66.2 | 67.5 | −1.3 | 0.884 (ns) | 0.715 (ns) |
-| 15 | Combined | 298 | 866 | 63.8 | 67.4 | −3.5 | 0.122 (ns) | 0.354 (ns) |
+| 15 | Weekday | 153 | 746 | 64.8 | 66.6 | −1.8 | 0.941 (ns) | 0.543 (ns) |
+| 15 | Combined | 186 | 758 | 61.7 | 66.4 | −4.8 | 0.077 (ns) | 0.292 (ns) |
 | 14 | Saturday | 40 | 7 | 37.8 | 36.6 | +1.2 | 0.317 (ns) | 0.256 (ns) |
-| 14 | Weekday | 376 | 1,298 | 48.5 | 47.7 | +0.8 | 0.071 (ns, borderline) | **0.006 (p<0.01)** |
-| 14 | Combined | 416 | 1,305 | 47.6 | 47.6 | −0.1 | 0.748 (ns) | 0.268 (ns) |
+| 14 | Weekday | 198 | 1,108 | 48.0 | 47.1 | +0.9 | 0.156 (ns) | 0.064 (ns, borderline) |
+| 14 | Combined | 238 | 1,115 | 46.2 | 46.9 | −0.7 | 0.119 (ns) | 0.641 (ns) |
 
-## Verified conclusion — the significant first-pass finding does not survive this revision at face value
+## Verified conclusion — no significant effect on either control line
 
-**Neither control line shows a clearly significant effect under the new
-windows.** Line 14's Weekday stratum shows the same *direction* as the
-first pass (blockade windows slower, +0.8 min) and the underlying hourly
-chart (`control_lines_delta.png`) still shows a visible daytime
+**Neither control line shows a significant effect under the corrected
+windows.** Line 14's Weekday stratum still shows the same *direction* as
+the first pass (blockade windows slower, +0.9 min) and the underlying
+hourly chart (`control_lines_delta.png`) still shows a visible daytime
 pattern (+2 to +8 min through midday/afternoon hours, near zero in the
-evening) — but the rank-based Mann-Whitney test is only borderline
-(p=0.071) and the Welch t-test is significant (p=0.006) — **the two
-tests disagree**, which did not happen in the first pass. Line 15 shows
-no significant effect in either stratum, matching the first pass.
+evening) — but now **both** the rank-based Mann-Whitney test (p=0.156) and
+the Welch t-test (p=0.064, borderline) agree it doesn't clear significance.
+Line 15 shows no significant effect in either stratum, matching every prior
+pass.
 
-**Why the effect got weaker, not the same or clearer, after "fixing"
-line 22:** pooling line 14's two directions together, and — more
-importantly — nearly tripling the window set to include many low-volume,
-one-off weekday deviations (not just the sustained, well-supported May/
-Saturday closure), dilutes a real but geographically/temporally
-localized signal with a lot of noisier "blocked" slots that may not
-actually correspond to sustained congestion. This is a legitimate
-methodological trade-off documented here, not swept under the rug: the
-new blocked rule is more complete (it correctly counts line 22) but less
-selective, and phase 08's control-line test is sensitive to exactly
-that trade-off in a way phase 06's simple frequency count is not.
+**The previous "two tests disagree" finding was itself the 22B artifact.**
+Before `fix_22b_central_prompt.md`, the 320-slot window set (contaminated
+by direction_B's spuriously-"blocked" slots) produced a Weekday Welch
+p=0.006 (significant) against a Mann-Whitney p=0.071 (not) — a genuine
+test disagreement that this README flagged as noteworthy. With the
+corrected 208-slot window set, that disagreement is gone: both tests now
+agree there's no effect. In hindsight the disagreement was a symptom of
+window-set contamination, not a real second, rank-insensitive signal.
+
+**Why there's still a small, non-significant directional hint on line
+14:** even at 208 slots the window set includes many one-off, low-volume
+weekday deviations on lines 17/19 alongside the sustained, well-supported
+May/Saturday closure, which dilutes a real but geographically/temporally
+localized signal. This remains a legitimate methodological trade-off: the
+new blocked rule is more complete (it correctly counts line 22A) but less
+selective than the first pass's hand-verified windows, and phase 08's
+control-line test is sensitive to exactly that trade-off in a way phase
+06's simple frequency count is not.
+
+**Statistical backing** ([docs/12_statistics](../12_statistics/README.md)):
+a day/hour-stratified permutation test -- which, unlike the plain
+Mann-Whitney Combined row above, is valid evidence even with Saturday and
+Weekday combined despite their different composition -- confirms neither
+line reaches significance testing all data together (Line 15: p=0.973;
+Line 14: p=0.998; both "suggestive, not conclusive"), consistent with this
+section's finding that the effect is at most a stratum-specific hint, not
+a robust combined result.
 
 **Bottom line:** this revision's evidence for indirect (knock-on)
-congestion on the control lines is weaker and less consistent than the
-first pass reported. The directional hint (line 14, weekday hours,
-midday/afternoon) is still visible in the chart and one of two tests,
-but should now be described as suggestive, not confirmed.
+congestion on the control lines is weaker than the first pass reported,
+and — now that the window-set contamination behind the earlier test
+disagreement is fixed — more internally consistent too: both tests agree
+on both lines. The directional hint (line 14, weekday hours,
+midday/afternoon) is still visible in the chart, but should be described
+as suggestive, not confirmed.
 
 **Sources:** `govData/df_cleaned.csv`, `govData/variant_merges.json`,
 [docs/02_route_mapping](../02_route_mapping/README.md),

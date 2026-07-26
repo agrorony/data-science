@@ -2,19 +2,32 @@
 
 Method and headline finding: [docs/05_skip_comparison](../README.md).
 
-**n=210 blocked vs n=1,879 baseline blocks (pooled directions, after the
+**fix_22b_central_prompt.md:** this page's numbers are now computed from
+**direction A only**, both the plotted curve and the stats test (see
+[docs/06_blockade_frequency/line_22](../../06_blockade_frequency/line_22/README.md)
+for why direction B is excluded project-wide). Previously the plotted
+curve stayed both-directions-pooled while only the stats test filtered to
+direction_A — an inconsistency introduced by the fact that direction_B's
+own non-reference variants used to be (wrongly) labeled "blocked" too, so
+pooling them in didn't obviously look wrong. Now that direction_B is
+centrally reclassified `"non_corridor"`, pooling would still dilute the
+comparison (direction_B's untouched-by-the-closure baseline rides sitting
+in the denominator), so both halves of this figure use direction_A only.
+
+**n=81 blocked vs n=972 baseline blocks (direction A only, after the
 round-3 count>5 significance floor — see main README section B2);
-overall median delta: −3.1 min — the smallest time saving of any
-line**, and 18 of 19 hours have enough data to be well-supported (the
-best coverage in this phase).
+overall median delta: −8.4 min**, in the same range as lines 19 (−8.7)
+and 97 (−8.0), not the outlier smallest saving the old pooled curve
+showed (−3.1 min, n=210/1,879 — that number mixed in direction_B's
+trivial, non-corridor variant, which barely changes travel time and
+dragged the pooled median toward zero).
 
-**Answer:** line 22's blocked/special variant still saves time on
-average, but by less than lines 9/17/19/97 — plausibly because line
-22's baseline route (55/52 stops, the longest scope) means its blocked
-variant skips a proportionally smaller slice of a much longer trip (see
-[docs/07_blockade_investigation](../../07_blockade_investigation/README.md)
-on why line 22's route length matters for classification too), and per
-[docs/05_skip_comparison](../README.md) section F, line 22's detour is
-barely different in distance from its baseline at all (+0.9%).
+**Answer:** line 22 direction_A's real corridor detour saves about as
+much time as the other shared-corridor lines. Per
+[docs/05_skip_comparison](../README.md) section F, its detour is also
+meaningfully *shorter* in distance than its baseline (−7.1%, not the
+previously-reported "~flat +0.9%" — that number was accidentally built
+from direction_B's dominant variant, the wrong one for this comparison).
 
-**Sources:** `govData/df_cleaned.csv`, `pipeline/plot_baseline_vs_blocked_delta.py`.
+**Sources:** `govData/df_cleaned.csv`, `pipeline/plot_baseline_vs_blocked_delta.py`,
+`pipeline/variant_merges.py`.

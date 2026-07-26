@@ -1,0 +1,9 @@
+footprint_group,line,direction,merged_variant_id,count,n_stops,missing_stop_codes,n_missing
+corridor_17_19,17,direction_A,2,41,41,"[1079, 1080, 1484, 1544, 1546, 1575]",6
+corridor_17_19,17,direction_B,1,76,46,"[1073, 1077, 1081]",3
+corridor_17_19,19,direction_A,1,91,36,"[1079, 1080, 1484, 1544, 1546, 1575]",6
+corridor_17_19,19,direction_B,1,114,34,"[1073, 1077, 1081]",3
+aza_9_97,9,direction_A,2,44,64,"[1072, 1077, 1543]",3
+aza_9_97,9,direction_B,2,54,56,"[1060, 1079, 1080, 1484, 1544, 1546, 1787]",7
+aza_9_97,97,direction_A,1,37,26,"[1060, 1079, 1484, 1787]",4
+aza_9_97,97,direction_B,1,27,32,"[1072, 1077]",2

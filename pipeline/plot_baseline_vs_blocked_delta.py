@@ -29,7 +29,7 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import pandas as pd
 
-from pipeline import config, variant_merges as vm, pooled_analysis as pa
+from pipeline import config, variant_merges as vm, pooled_analysis as pa, stats_tests as st
 
 OUT_DIR = config.REPO_ROOT / "docs" / "05_skip_comparison"
 THIN_THRESHOLD = 8  # fewer than this many blocked blocks at an hour -> shaded as thin
@@ -80,7 +80,16 @@ def compute_delta(baseline_ep: pd.DataFrame, blocked_ep: pd.DataFrame) -> tuple[
     return delta, thin_hours, blocked_n
 
 
-def plot_line_delta(line, baseline_ep: pd.DataFrame, blocked_ep: pd.DataFrame, out_path) -> dict:
+def phase05_stats(baseline_ep: pd.DataFrame, blocked_ep: pd.DataFrame) -> dict:
+    """docs/12_statistics comparison -- blocked/special variant vs. baseline,
+    all hours pooled, unmatched (the two groups are different route
+    choices for the same slot pool, not day/hour-matched pairs)."""
+    a = blocked_ep["end_time_min"].to_numpy()
+    b = baseline_ep["end_time_min"].to_numpy()
+    return st.run_full_comparison(a, b)
+
+
+def plot_line_delta(line, baseline_ep: pd.DataFrame, blocked_ep: pd.DataFrame, out_path, stats_result: dict | None = None, stats_label: str | None = None, dir_a_only: bool = False) -> dict:
     delta, thin_hours, blocked_n = compute_delta(baseline_ep, blocked_ep)
 
     fig, ax = plt.subplots(figsize=(10, 5.5))
@@ -94,20 +103,29 @@ def plot_line_delta(line, baseline_ep: pd.DataFrame, blocked_ep: pd.DataFrame, o
     ax.axhline(0, color="black", linewidth=1, linestyle="--", alpha=0.6)
     ax.set_xlabel("Hour of day")
     ax.set_ylabel("Extra travel time on blocked/special variant (min)")
-    ax.set_title(f"Line {line}: Baseline vs. Blocked/Special Variant -- Travel-Time Delta by Hour", fontsize=12, fontweight="bold")
+    title = f"Line {line}" + (" (direction A only)" if dir_a_only else "") + ": Baseline vs. Blocked/Special Variant -- Travel-Time Delta by Hour"
+    ax.set_title(title, fontsize=12, fontweight="bold")
     ax.legend(fontsize=9)
     ax.grid(True, alpha=0.3)
 
     overall_delta = blocked_ep["end_time_min"].median() - baseline_ep["end_time_min"].median()
     verdict = "costs time" if overall_delta > 0 else "saves time"
-    fig.text(
-        0.5, -0.05,
+    pooling_desc = "direction A only" if dir_a_only else "both directions pooled"
+    caption = (
         f"How to read: for each hour of day, the line plots (median travel time on the line's blocked/special "
-        f"variant) minus (median travel time on its baseline variant), both directions pooled and using only the "
+        f"variant) minus (median travel time on its baseline variant), {pooling_desc} and using only the "
         f"confirmed post-merge variant set; positive = the special route is slower, negative = faster. Grey bands "
         f"mark hours with fewer than {THIN_THRESHOLD} blocked-variant observations. Overall (all hours pooled): the "
         f"special route {verdict} by {abs(overall_delta):.1f} min (n={len(blocked_ep):,} blocked vs "
-        f"n={len(baseline_ep):,} baseline blocks).",
+        f"n={len(baseline_ep):,} baseline blocks)."
+    )
+    if stats_result is not None:
+        label_note = f" ({stats_label})" if stats_label else ""
+        caption += f" Statistical test{label_note} (docs/12_statistics): {st.format_delta_annotation(stats_result)}."
+    if dir_a_only:
+        caption += " " + config.LINE_22_DIR_A_FOOTNOTE
+    fig.text(
+        0.5, -0.05, caption,
         ha="center", va="top", fontsize=8, wrap=True,
     )
     fig.savefig(out_path, dpi=120, bbox_inches="tight")
@@ -139,7 +157,7 @@ def plot_all_lines_delta(line_deltas: dict[int, pd.Series], out_path) -> None:
             continue
         ax.plot(
             delta.index, delta.values, color=CROSS_LINE_COLORS[line],
-            linewidth=2.2, marker="o", markersize=4.5, label=f"Line {line}",
+            linewidth=2.2, marker="o", markersize=4.5, label=f"Line {line} (dir A)" if line == 22 else f"Line {line}",
         )
 
     ax.axhline(0, color="black", linewidth=1, linestyle="--", alpha=0.6)
@@ -157,7 +175,7 @@ def plot_all_lines_delta(line_deltas: dict[int, pd.Series], out_path) -> None:
         "How to read: for each hour of day and each line, (median travel time on that line's blocked/special "
         "variant) minus (median travel time on its baseline variant), both directions pooled and using only the "
         "confirmed post-merge variant set. Curves above the dashed zero line mean the detour costs time at that "
-        "hour; curves below mean it saves time.",
+        "hour; curves below mean it saves time. " + config.LINE_22_DIR_A_FOOTNOTE,
         ha="center", va="top", fontsize=8, wrap=True,
     )
     fig.savefig(out_path, dpi=120, bbox_inches="tight")
@@ -295,10 +313,27 @@ def run() -> None:
         if blocked_ep.empty or baseline_ep.empty:
             print(f"line {line}: no blocked or no baseline blocks, skipped.")
             continue
+        is_line22 = line == 22
+        if is_line22:
+            # fix_22b_central_prompt.md -- blocked_ep is already guaranteed
+            # direction_A only for line 22 post-centralization
+            # (variant_merges never labels direction_B "blocked"), but
+            # baseline_ep still pools both directions unless filtered here,
+            # which would compare direction_A's real detour against a
+            # baseline contaminated by direction_B's different route. Filter
+            # both endpoints the same way (config.LINE_22_SHARE_DIRECTION)
+            # so the plotted curve and the stats test agree -- previously
+            # only the stats test was filtered, leaving the figure itself
+            # mismatched.
+            baseline_ep = baseline_ep[baseline_ep["direction_group"] == config.LINE_22_SHARE_DIRECTION]
+            blocked_ep = blocked_ep[blocked_ep["direction_group"] == config.LINE_22_SHARE_DIRECTION]
+        stats_label = "direction A only" if is_line22 else None
+        stats_result = phase05_stats(baseline_ep, blocked_ep)
+
         line_dir = OUT_DIR / f"line_{line}"
         line_dir.mkdir(parents=True, exist_ok=True)
         out_path = line_dir / "baseline_vs_blocked_delta.png"
-        row = plot_line_delta(line, baseline_ep, blocked_ep, out_path)
+        row = plot_line_delta(line, baseline_ep, blocked_ep, out_path, stats_result=stats_result, stats_label=stats_label, dir_a_only=is_line22)
         summary_rows.append(row)
         print(f"Saved -> {out_path}  ({row})")
 

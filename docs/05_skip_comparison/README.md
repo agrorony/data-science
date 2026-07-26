@@ -61,8 +61,14 @@ directly. Colors now come from the single project-wide palette in
   large blockade delay at certain hours ([docs/09](../09_lines_9_97/README.md))
   is congestion/signal time on the detour, not extra distance. A
   companion `detour_distance_all_lines.png` shows the same comparison
-  for lines 9/17/19/22 for context (all also end up *shorter*, except
-  line 22 which is ~flat, +0.9%).
+  for lines 9/17/19/22 for context (all also end up *shorter*: −15.0%,
+  −6.5%, −6.8%, −7.1% respectively). **fix_22b_central_prompt.md note:**
+  line 22's panel now correctly resolves to its **direction_A** detour
+  (−1.26 km, −7.1%) — before the central fix, `dominant_blocked_variant`
+  picked direction_B's higher-count but non-corridor 1-stop swap instead
+  (a trivial, near-zero-distance deviation, previously reported here as
+  "~flat, +0.9%"), which was the wrong variant for this comparison
+  entirely.
 
 ## Headline finding: every remaining line's blocked/special variant is faster overall
 
@@ -71,22 +77,25 @@ directly. Colors now come from the single project-wide palette in
 | 9 | 1,605 | 93 | **−15.9** | saves time |
 | 17 | 944 | 93 | **−11.4** | saves time |
 | 19 | 2,191 | 183 | **−8.7** | saves time |
-| 22 | 1,879 | 210 | **−3.1** | saves time |
+| 22 (direction A only) | 972 | 81 | **−8.4** | saves time |
 | 97 | 2,145 | 61 | **−8.0** | saves time |
 
 (Lines 14 and 15 no longer appear — see B2 above. `n blocked` in this
 table is after the `count>5` significance floor, not the raw
-`variant_type_v2` count used elsewhere in the project.)
+`variant_type_v2` count used elsewhere in the project. **fix_22b_central_prompt.md:**
+line 22's row (plot and n's) is now computed from direction_A only,
+matching its stats test below — previously the plotted curve stayed
+both-directions-pooled (n=1,879/210, −3.1 min) while only the stats test
+used direction_A, an inconsistency this fix removes; see
+[line_22/README.md](line_22/README.md).)
 
 Every remaining line's blocked/special variant is measurably *faster*
 than its baseline overall, consistent with earlier rounds: the routes
 classified as "detours" in this dataset behave like short-turn/express
 service or avoid a congested corridor, not like a slower forced detour.
-Line 22 — now correctly showing a substantial blocked share
-([docs/06_blockade_frequency](../06_blockade_frequency/README.md)) —
-also shows the smallest time saving (−3.1 min), plausibly because its
-blocked variant only skips a small slice of a much longer route (and,
-per F above, is barely longer in distance at all).
+Line 22's real, direction_A-only corridor detour saves **−8.4 min** —
+in the same range as lines 19 and 97, not the outlier smallest saving the
+previous (direction-pooled, partly non-corridor) curve had shown.
 
 **`delta_all_lines.png`:** the combined view shows this "saves time"
 pattern is not uniform across hours — several lines' curves cross above
@@ -94,6 +103,15 @@ zero at specific hours even though their all-hours median is negative
 (see e.g. line 97's midday peak, discussed in
 [docs/09](../09_lines_9_97/README.md) where the same variant behaves
 very differently from line 9's).
+
+**Statistical backing** ([docs/12_statistics](../12_statistics/README.md)):
+a permutation test + bootstrap CI on each line's blocked-vs-baseline
+travel-time gap (pooled over hours, unmatched) confirms every one of the
+five savings above is statistically supported (95% CI excludes 0, p <=
+0.005 in all five tests) -- line 22's plot and test both use direction A
+only (see
+[docs/06_blockade_frequency/line_22](../06_blockade_frequency/line_22/README.md)
+for why).
 
 Per-line detail: [line_9](line_9/README.md), [line_17](line_17/README.md),
 [line_19](line_19/README.md), [line_22](line_22/README.md),

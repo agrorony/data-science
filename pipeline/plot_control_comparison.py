@@ -37,7 +37,7 @@ import numpy as np
 import pandas as pd
 from scipy import stats
 
-from pipeline import config, variant_merges as vm, pooled_analysis as pa
+from pipeline import config, variant_merges as vm, pooled_analysis as pa, stats_tests as st
 
 OUT_DIR = config.REPO_ROOT / "docs" / "08_control_lines_15_14"
 MIN_N_FOR_TEST = 3
@@ -127,6 +127,25 @@ def compare_groups(tagged: pd.DataFrame, label: str) -> list[dict]:
     return rows
 
 
+def _strata_key(df: pd.DataFrame) -> np.ndarray:
+    """The (day_of_week, hour) match key `tag_windows` built the
+    blockade/matched_normal grouping on."""
+    return (df["day_of_week"].astype(str) + "_" + df["scheduled_departure_time"].astype(str)).to_numpy()
+
+
+def phase08_stats(tagged: pd.DataFrame) -> dict:
+    """docs/12_statistics comparison -- blockade window vs. matched-normal
+    travel time, Saturday+Weekday together, permuted only within
+    (day_of_week, hour) strata. Unlike a plain Mann-Whitney on the pooled
+    Combined group, this is valid despite the two groups' different
+    day/hour composition, since labels never cross strata."""
+    blk = tagged[tagged["group"] == "blockade"]
+    norm = tagged[tagged["group"] == "matched_normal"]
+    a = blk["mean_cumulative_travel_time_min"].to_numpy()
+    b = norm["mean_cumulative_travel_time_min"].to_numpy()
+    return st.run_full_comparison(a, b, strata_a=_strata_key(blk), strata_b=_strata_key(norm))
+
+
 def compute_hourly_delta(tagged: pd.DataFrame) -> tuple[pd.Series, list]:
     """Per-hour median-travel-time gap (blockade minus matched normal) and
     the Saturday-only window hours, shared by all control lines' curves in
@@ -180,6 +199,12 @@ def plot_combined_control_delta(results: dict[str, dict], out_path) -> None:
         "(lines 17/19/22, either direction, new >15-stop blocked rule) and matched normal months at the same "
         "day-of-week/hour, both directions of each control line pooled. " + "; ".join(caption_parts) + "."
     )
+    stats_parts = []
+    for label, r in results.items():
+        stats_parts.append(
+            f"{label}: {st.format_delta_annotation(r['perm_stats'])} ({r['breadth']})"
+        )
+    caption += " Statistical test (docs/12_statistics, stratified by day/hour): " + "; ".join(stats_parts) + "."
     fig.text(0.5, -0.05, caption, ha="center", fontsize=8, wrap=True)
     fig.savefig(out_path, dpi=120, bbox_inches="tight")
     plt.close(fig)
@@ -206,7 +231,13 @@ def run() -> None:
         stats_rows.extend(label_stats)
 
         delta, sat_hours = compute_hourly_delta(tagged)
-        results[label] = {"route_name": route_name, "delta": delta, "sat_hours": sat_hours, "stats_rows": label_stats}
+        perm_stats = phase08_stats(tagged)
+        n_pos, n_total = int((delta > 0).sum()), len(delta)
+        breadth = f"delta positive in {n_pos} of {n_total} hours"
+        results[label] = {
+            "route_name": route_name, "delta": delta, "sat_hours": sat_hours, "stats_rows": label_stats,
+            "perm_stats": perm_stats, "breadth": breadth,
+        }
 
     combined_path = OUT_DIR / "control_lines_delta.png"
     plot_combined_control_delta(results, combined_path)

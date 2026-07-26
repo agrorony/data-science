@@ -1,0 +1,11 @@
+route_name,direction_group,n_blocked_hours,median_hour_blocked,n_nonblocked_hours,median_hour_nonblocked
+9,direction_A,7,14.0,8,10.0
+9,direction_B,9,16.0,5,8.0
+17,direction_A,6,12.5,3,9.0
+17,direction_B,8,12.5,4,6.5
+19,direction_A,11,15.0,11,11.0
+19,direction_B,11,16.0,10,9.5
+22,direction_A,10,16.5,9,9.0
+22,direction_B,0,,16,12.5
+97,direction_A,7,16.0,13,11.0
+97,direction_B,6,13.5,11,19.0

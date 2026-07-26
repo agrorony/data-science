@@ -81,20 +81,39 @@ already classified `regular`, not `blocked` — see docs/03).
 | 15 (control) | 0.3% | 0.0% | 56 |
 | 17 | 12.2% | 80.5% | 82 |
 | 19 | 8.9% | 75.7% | 74 |
-| 22 | **11.7%** | 51.2% | 80 |
+| 22 (dir A) | **9.9%** | 69.0% | 42 |
 | 97 | 4.7% | 66.4% | 110 |
 
-(This table pools both directions of every line, including 22, per
-house style. The compact `blockade_saturday_summary.png` figure below
-is the one exception — round 4, section B above.)
+(This table pools both directions of every line **except line 22**, which
+is direction_A only, matching every other figure in this phase --
+`fix_22b_central_prompt.md` retired the previous "one exception" framing.
+Before that fix this row *did* pool both directions like every other line
+(11.7% overall / 51.2% Saturday, n=80), since direction_B's non-reference
+variants were still occasionally mislabeled "blocked" and pooling didn't
+look obviously wrong. Now that direction_B is centrally reclassified
+`"non_corridor"` and never contributes to the numerator, pooling would
+only dilute the denominator with its untouched-by-the-closure schedule --
+recomputed both-directions-pooled the row would read 5.0%/36.2% (n=80),
+which understates line 22's real corridor exposure and would visually
+contradict `blockade_frequency_22.png` below. See
+[disagreement_deep_dive.md](disagreement_deep_dive.md) and
+[line_22/README.md](line_22/README.md).)
 
-**Line 22 is fixed.** In the first pass, line 22's overall share (0.2%)
-sat at control-line level — [docs/07_blockade_investigation](../07_blockade_investigation/README.md)
+**Line 22 is fixed twice over.** In the first pass, line 22's overall
+share (0.2%) sat at control-line level —
+[docs/07_blockade_investigation](../07_blockade_investigation/README.md)
 diagnosed this as a genuine classification bug (its real closure fell
-just under the old 10%-of-route-length cutoff). Under the new rule,
-line 22 now shows **11.7%** — squarely with lines 9/17/19/97, and its
-May-weekday cells now clearly show the same closure pattern as line 19
-(see `blockade_frequency_22.png`: May Sat=100%, Sep Sat=100%, Tue/May=62%).
+just under the old 10%-of-route-length cutoff). The new >15-stop rule
+fixed that, but introduced a second, subtler bug: direction_B's own
+non-corridor variants sometimes cleared the same >15-stop threshold on
+raw stop count alone, so pooling both directions inflated the numerator
+with slots that were never real detours while also diluting it as a
+denominator everywhere line 22 appears. `fix_22b_central_prompt.md`
+closes that gap centrally
+(`pipeline.variant_merges.LINE_22_NON_CORRIDOR_DIRECTION`). Direction_A
+alone now shows **9.9%** overall — squarely with lines 9/17/19/97 — and
+its May-weekday cells clearly show the same closure pattern as line 19
+(see `blockade_frequency_22.png`: May Sat=100%, Sep Sat=100%, Tue/May=75%).
 
 **Line 15 is not exactly 0%; line 14 is (round 4).** As documented in
 [docs/07's addendum](../07_blockade_investigation/README.md), the new
@@ -131,8 +150,10 @@ their regular/baseline variant instead of a blocked one.**
   slots).
 - **Saturday June, hours 21:00–23:00**: line 17 is `blocked` in all 6
   slots (100%); line 19 in 4 of 6 (67%, `reference` at both 23:00
-  slots); line 22 in 3 of 6 (50%, `reference` at 21:00 direction_B and
-  both 23:00 slots).
+  slots); line 22 in **2 of 6 (33%**, `reference`/`non_corridor` at
+  21:00 and 22:00 direction_B and both 23:00 slots — was reported as 3
+  of 6 (50%) before `fix_22b_central_prompt.md`, when 22:00 direction_B's
+  trivial off-footprint variant was still mislabeled `blocked`).
 
 **Conclusion: this is genuine differential exposure at the same moment
 in time, not a scheduling or denominator artifact.** At the exact hours

@@ -1,0 +1,16 @@
+day_of_week,day_label,direction_group,n_blocked,n_total,share
+1,Sun,direction_A,0,19,0.0
+1,Sun,direction_B,0,19,0.0
+1,Sun,BOTH,0,38,0.0
+2,Mon,direction_A,0,19,0.0
+2,Mon,direction_B,0,19,0.0
+2,Mon,BOTH,0,38,0.0
+3,Tue,direction_A,0,19,0.0
+3,Tue,direction_B,0,19,0.0
+3,Tue,BOTH,0,38,0.0
+4,Wed,direction_A,4,19,0.21052631578947367
+4,Wed,direction_B,0,19,0.0
+4,Wed,BOTH,4,38,0.10526315789473684
+5,Thu,direction_A,0,19,0.0
+5,Thu,direction_B,0,19,0.0
+5,Thu,BOTH,0,38,0.0
