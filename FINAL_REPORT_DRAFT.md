@@ -95,19 +95,67 @@ This baseline (no detour) picture is the yardstick the rest of the report measur
 
 **Figure 3.** Baseline travel time by departure hour, all seven lines (±1 SEM shading). `docs/04_baselines/baseline_travel_time_by_hour.png`
 
+### 2.4 How often do lines actually detour?
+
+Section 2.2 showed how one detour is detected within a single line. Zooming out to the whole network: across the full year, how often does each line run a non-baseline ("blocked") variant instead of its usual route?
+
+**Table 5.** Share of trips on a non-baseline variant, by line, overall and on Saturdays
+
+| Line | Overall blocked share | Saturday blocked share | n (Saturday blocks) |
+|---|---|---|---|
+| 17 | 12.2% | 80.5% | 82 |
+| 22 (direction A) | 9.9% | 69.0% | 42 |
+| 19 | 8.9% | 75.7% | 74 |
+| 9 | 7.0% | 84.1% | 82 |
+| 97 | 4.7% | 66.4% | 110 |
+| 15 (control) | 0.3% | 0.0% | 56 |
+| 14 (control) | 0.0% | 0.0% | 65 |
+
+Every line that shares the Aza St. corridor (9, 17, 19, 22, 97) shows the same shape: a modest overall share (5–12%) that jumps to a large majority of trips on Saturdays specifically (66–84%). The two control lines sit far below all five, at 0.3% and 0.0% — a useful sanity check, since they don't run through the corridor at all: their near-zero share confirms the detection method is picking up something real and geographically specific on the five affected lines, not noise spread evenly across the network.
+
+One nuance is worth flagging directly, since it looks like a contradiction at first: on two Saturdays (April, June) where most affected lines sit near 100% blocked, line 22 — and sometimes line 19 — shows a markedly lower share (25–75%) at the exact same hours. Checking each line's individual trip records rules out a scheduling difference: all lines ran the same hour slots, just some of line 22's trips stayed on the normal route instead of detouring. This is genuine differential exposure, not an artifact — line 22's longer route only partially overlaps the closed segment, so a closure evidently doesn't force 100% of its scheduled trips onto a detour the way it does for line 17.
+
+**Figure 5.** Non-baseline variant share by month and day of week, all seven lines, shared colorbar. `docs/06_blockade_frequency/blockade_all_lines.png`
+
 ---
 
 ## 3. Specific question, methods, conclusions
 
-*(Section 3.1 — blockade frequency/timing — and 3.2 — detour cost — depend on Rony's ongoing work on the blockade-frequency phases (Section 2.4/docs 06, 13) and will be drafted once that's finalized. Note: docs/07 was archived and replaced by docs/13's confirmed-hours output as the answer to "when do blockades happen" — see docs/README.md. Jumping ahead to 3.3, which is done.)*
+### 3.1 When during the year do closures happen?
+
+**Question:** is there a clear, well-supported pattern for when Aza St. closures occur, or are they scattered unpredictably?
+
+**Method:** every (month, day-of-week) combination was scanned for cells where at least 3 lines independently show a blocked share above 10%, then each flagged cell was confirmed at the hour level: an hour only counts as confirmed if at least 3 of that cell's affected lines are each individually well-supported (n≥8 observations) and "pure" (every trip in that exact slot agrees on which variant it ran) — a strict bar chosen specifically to avoid rounding a merely red-looking cell up to "confirmed."
+
+**Findings:** 21 (month, day-of-week) cells clear this bar across the year. Eleven are Saturdays — every month with data except December — each confirmed for a consistent evening window, roughly 19:00 through midnight. Ten are weekdays: three correspond to specific, separately verified events (a wide Wednesday event in November, 10:00–22:00; a narrower Wednesday event in December, 13:00–18:00; and two distinct single-hour events on a Monday in October, 08:00 and 13:00, that turned out to have two unrelated causes rather than being one spread-out closure), and seven are newly confirmed weekday cells in April, May, and June — May Monday in particular is large and well supported (up to 26 observations per line). As a sanity check, the two control lines never clear the 10% bar in any single cell across the whole year, which is expected given their near-zero overall share.
+
+**Conclusion (part 1 of the big question):** closures are concentrated on Saturday evenings essentially year-round, plus a smaller number of specific weekday windows clustered in spring (April–June) and one sustained event each in autumn and early winter.
+
+**Figure 6.** Confirmed blockade hours by month and day of week, full year. `docs/13_full_year_calendar/confirmed_hours_calendar.png`
+
+### 3.2 Does detouring cost or save time?
+
+**Question:** when a bus detours around a closure instead of running its normal route, does the rider lose time overall, or does the alternate path compensate?
+
+**Method:** for each of the five affected lines, we compared the median travel time of its dominant detour variant against its own baseline variant, by departure hour, both directions pooled.
+
+**Findings:** every one of the five lines' detour is faster overall than its baseline — savings from −8.0 min (line 97) to −15.9 min (line 9), statistically supported for every line individually (95% CI excludes 0, p≤0.005 in all five). The underlying route distance explains why: every detour is measurably *shorter* than the baseline route it replaces (by 6.5–17.7%), not longer — these "detours" behave more like a short-turn or express variant than a slow forced diversion.
+
+This overall pattern hides one exception worth flagging up front, since Section 3.4 returns to it: line 97's detour is only faster *on average*. Broken down by hour, it costs riders up to +14 minutes specifically between roughly 14:00 and 17:00, even though the same detour saves time at every other hour of the day.
+
+**Conclusion (part 2):** taking the detour is, on balance, the better choice on every affected line — but "on balance" is doing real work for line 97 specifically in the mid-afternoon.
+
+**Figure 7.** Median travel-time delta (detour minus baseline) by hour, all five affected lines. `docs/05_skip_comparison/delta_all_lines.png`
 
 ### 3.3 Do closures ripple onto lines that don't run through Aza St.? — control lines 14 & 15
 
 **Question:** lines 14 and 15 don't pass through the Aza St. corridor at all. Do the closures there slow them down anyway, indirectly — e.g. via displaced traffic elsewhere in the city?
 
-**Method:** we first defined a *confirmed blockade window*: any (month, day-of-week, hour) slot where at least one of lines 17, 19, or 22 (either direction) ran a genuinely blocked variant that hour (missing more than 15 stops from its normal route). This gave 320 such slots across the year (36 on Saturdays, 284 on weekdays).
+**Method:** we first defined a *confirmed blockade window*: any (month, day-of-week, hour) slot where at least one of lines 17, 19, or 22 (direction A only — see note below) ran a genuinely blocked variant that hour (missing more than 15 stops from its normal route). This gave **208 such slots** across the year (36 on Saturdays, 172 on weekdays).
 
-For each control line (14, both directions pooled; 15, its single loop route), every one of its own baseline trips was labeled *blockade* if its own (month, day, hour) matched one of those 320 flagged slots, or *matched normal* if it ran at the same day-of-week and hour but in a month that wasn't flagged for that slot — comparing like against like (same time of week), not blockade months against all other months indiscriminately. We compared the two groups' travel-time distributions with a Mann-Whitney U test (primary, since travel times are right-skewed) and Welch's t-test (secondary), separately for Saturdays and weekdays.
+*Methods note: line 22's direction B needed a separate fix first.* Line 22 runs a longer overall route than the other affected lines, and a handful of its direction-B trips happened to also miss more than 15 stops for reasons unrelated to the Aza St. closure — one-stop schedule swaps elsewhere on the route, not detours. Counting those as "blockade windows" would have overstated how often a closure was really happening. Excluding direction B (verified separately, not a real corridor detour) drops the weekday window count from an earlier, contaminated 284 to the corrected 172; Saturday windows are unaffected, since direction B never drove a Saturday-only window.
+
+For each control line (14, both directions pooled; 15, its single loop route), every one of its own baseline trips was labeled *blockade* if its own (month, day, hour) matched one of the 208 confirmed slots, or *matched normal* if it ran at the same day-of-week and hour but in a month that wasn't flagged for that slot — comparing like against like (same time of week), not blockade months against all other months indiscriminately. We compared the two groups' travel-time distributions with a Mann-Whitney U test (primary, since travel times are right-skewed) and Welch's t-test (secondary), separately for Saturdays and weekdays.
 
 **Findings:**
 
@@ -116,18 +164,44 @@ For each control line (14, both directions pooled; 15, its single loop route), e
 | Line | Stratum | n blockade | n normal | Median blockade (min) | Median normal (min) | Δ (min) | Mann-Whitney p | Welch t p |
 |---|---|---|---|---|---|---|---|---|
 | 15 | Saturday | 33 | 12 | 52.9 | 52.0 | +0.9 | 0.376 | 0.353 |
-| 15 | Weekday | 265 | 854 | 66.2 | 67.5 | −1.3 | 0.884 | 0.715 |
+| 15 | Weekday | 153 | 746 | 64.8 | 66.6 | −1.8 | 0.941 | 0.543 |
 | 14 | Saturday | 40 | 7 | 37.8 | 36.6 | +1.2 | 0.317 | 0.256 |
-| 14 | Weekday | 376 | 1,298 | 48.5 | 47.7 | +0.8 | 0.071 | **0.006** |
+| 14 | Weekday | 198 | 1,108 | 48.0 | 47.1 | +0.9 | 0.156 | 0.064 |
 
-Neither control line shows a clearly significant effect. Line 15 shows essentially no difference in either stratum. Line 14's weekday stratum shows a small effect in the expected direction (+0.8 min slower during blockade windows), but the two tests disagree: Mann-Whitney is only borderline (p=0.071) while Welch's t-test is significant (p=0.006).
+Neither control line shows a significant effect in any stratum, and — unlike an earlier pass through this analysis — the two tests now agree with each other everywhere, including on line 14's weekday stratum (Mann-Whitney p=0.156, Welch p=0.064; both "not significant," though Welch is borderline).
 
-Figure 4 shows the same comparison hour by hour instead of pooled into one number. Both control lines run 2–9 minutes slower than their own normal pattern specifically between roughly 13:00 and 17:00, during confirmed blockade windows. But the two lines' curves track each other closely across the *entire* day — nearly identical shape and magnitude, not just in that window — which points away from an Aza-corridor-specific effect and toward something both lines would share regardless of that one closure: ordinary citywide midday/afternoon traffic that happens to also be heavier on the days the closures were active.
+**Stronger, properly-stratified check:** because Saturday and weekday trips differ systematically (different traffic, different schedules), simply pooling them risks distorting the comparison. A day/hour-stratified permutation test — which shuffles blockade/normal labels only *within* matching (day-of-week, hour) groups, so it stays valid even with both strata combined — gives one clean answer per line: line 15's travel time is **−1.2 min [95% CI −3.4, +1.0], p=0.973**; line 14's is **−0.4 min [95% CI −1.9, +1.2], p=0.998**. Both confidence intervals comfortably include zero, both effect sizes are negligible (Cliff's δ = −0.08 and −0.06), and both p-values are about as far from significant as a p-value can be.
 
-**Conclusion:** we do not find clear, consistent evidence that the Aza St. closures spill over onto lines that don't run through that corridor. There is a directional hint — line 14 runs a little slower during blockade windows in the afternoon — but it only clears one of two statistical tests, and line 15 shows nothing at all. For a rider deciding whether closures make lines 14 or 15 unreliable, the honest answer from this data is: not detectably — any slowdown they'd experience in that window is better explained by ordinary midday congestion than by the Aza St. closure itself.
+Figure 4 shows the hour-by-hour version of the same comparison. Both lines swing several minutes above and below zero at different, largely uncoordinated hours (line 15 peaks near +4.4 min around 08:00; line 14 peaks near +9.2 min around 16:00) rather than moving together — this is consistent with the null result above: what looks like a pattern hour to hour is noise around a near-zero average, not a shared response to the closures.
+
+**Conclusion:** we do not find evidence that the Aza St. closures spill over onto lines that don't run through that corridor. Both the per-stratum tests and the more rigorous day/hour-stratified permutation test agree on this for both lines. For a rider deciding whether closures make lines 14 or 15 unreliable, the answer from this data is: no — travel time on those two lines during a confirmed closure is statistically indistinguishable from a normal day at the same hour.
 
 **Figure 4.** Hourly travel-time delta (blockade window minus matched normal), lines 14 and 15, Saturday-only hours shaded. `docs/08_control_lines_15_14/control_lines_delta.png`
 
+### 3.4 Lines 9 & 97: same area, different segment — reroute, delay, or both?
+
+**Question:** lines 9 and 97 pass through the general Aza St. area but not the exact segment shared by 17/19/22. During a confirmed closure, do they change route, run late, or neither?
+
+**Method:** using the same confirmed blockade windows as Section 3.3, two separate questions were asked for each line: (a) *route* — does the line's own share of non-baseline trips rise during blockade windows compared with matched normal hours (chi-square/Fisher's exact test)? (b) *time* — restricted to trips that stayed on the line's own baseline route, does travel time change (Mann-Whitney U)?
+
+**Findings — line 9:** strongly route-affected in both strata (Saturday: 92.1% vs. 52.9% non-baseline, p=0.001; weekday: 31.0% vs. 0.7%, p≈0) — line 9 reroutes far more often once the corridor is closed. It is also time-affected, but only on Saturdays: baseline trips run **11.7 minutes slower** during confirmed blockade windows (75.6 vs. 63.9 min, p=0.010) — the single largest confirmed delay found anywhere in this project. There is no measurable weekday time effect.
+
+**Findings — line 97:** equally strongly route-affected (Saturday: 85.3% vs. 46.2%, p=0.0003; weekday: 9.2% vs. 0.8%, p≈0). Unlike line 9, its own baseline-route travel time shows no delay — if anything, a small, statistically supported speed-up (−1.2 min, p=0.005) during blockade windows, plausibly because traffic that normally shares its route is displaced elsewhere. But as Section 3.2 noted, line 97's own detour is not uniformly fast: it costs up to +14 minutes specifically between 14:00 and 17:00, so which variant a rider happens to catch, and at what hour, matters more for line 97 than for line 9.
+
+**Conclusion (part 3):** both lines reroute heavily during a closure rather than absorbing it in place — but only line 9 riders experience a confirmed, sizeable delay, and only on Saturdays. Line 97 riders are largely protected on time overall, except for a specific mid-afternoon window where their own detour becomes the slow option.
+
+**Figure 8.** Own detour cost vs. cost of staying on the baseline route during others' blockades, by hour, line 97. `docs/09_lines_9_97/line_97_blockade_delta.png`
+
+### Bringing the four sub-questions together
+
+Returning to the project's central question — how can a resident know the most reliable way to leave Rechavia by bus, given recurring closures — the four findings above combine into a single practical answer. Closures are concentrated on Saturday evenings nearly year-round, plus a handful of specific spring weekday windows (3.1). During a confirmed closure, lines 17, 19, 22, 9, and 97 all reroute rather than sit in the closure, and that reroute is faster than their normal route on average (3.2), so simply staying on one of these lines through a closure window is, on balance, not a bad choice. The exceptions are narrow but concrete: line 9 riders face a real ~12-minute delay specifically on Saturdays (3.4), and line 97's detour briefly reverses into a time cost between 14:00 and 17:00 (3.2, 3.4) — both worth avoiding at those specific times if an alternative exists. Lines 14 and 15, which don't run through the corridor at all, show no measurable slowdown at any time during a confirmed closure (3.3) — they are the one genuinely unaffected option, though also the two lines least useful for actually leaving the neighborhood via this corridor in the first place.
+
 ---
 
-*(Section 2.4, Sections 3.1–3.2, 3.4, and Section 4 still to be drafted — see `FINAL_REPORT_OUTLINE.md` for what goes where.)*
+## 4. Follow-up ideas
+
+A few directions this project didn't have time to pursue, in rough order of how directly they extend the current analysis. The stop code marking line 97's direction split (`5912`) is unresolved in every available stop-name table in this dataset; a proper GTFS or stations re-export would let line 97's figures use a real stop name instead of a raw code. The same closure-impact method — confirmed windows, baseline-vs-detour delta, control-line spillover test — is not specific to Aza St. or to Jerusalem, and re-running it on a different corridor or city would test whether the pattern found here (fast detours, narrow but real delay windows, no measurable spillover to unrelated lines) generalizes or was specific to this particular street and this particular set of closures. This dataset also has no ridership or crowding information, only scheduled travel time; combining it with boarding counts would turn "line 9 loses 12 minutes on Saturdays" into an estimate of total rider-minutes lost, a more directly useful number for transit planning than a per-trip delay. Finally, since the detection method here works retrospectively on a full year of data, a live version — watching for a sudden shift in which variant a line is running, hour by hour — could plausibly flag a new closure within the same day it starts, rather than requiring a full data export to confirm it after the fact.
+
+---
+
+*(Draft complete through Section 4. Remaining before submission: final figure selection to fit the 10-page budget, formatting pass — font/margins/line spacing/figure numbering renumbered in order — and trimming prose where sections run long. See `FINAL_REPORT_OUTLINE.md` for the page budget and task split.)*
