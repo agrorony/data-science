@@ -99,7 +99,7 @@ This baseline (no detour) picture is the yardstick the rest of the report measur
 
 ## 3. Specific question, methods, conclusions
 
-*(Section 3.1 — blockade frequency/timing — and 3.2 — detour cost — depend on Rony's ongoing work on the blockade-frequency and investigation phases (Section 2.4/docs 06–07) and will be drafted once that's finalized. Jumping ahead to 3.3, which is done.)*
+*(Section 3.1 — blockade frequency/timing — and 3.2 — detour cost — depend on Rony's ongoing work on the blockade-frequency phases (Section 2.4/docs 06, 13) and will be drafted once that's finalized. Note: docs/07 was archived and replaced by docs/13's confirmed-hours output as the answer to "when do blockades happen" — see docs/README.md. Jumping ahead to 3.3, which is done.)*
 
 ### 3.3 Do closures ripple onto lines that don't run through Aza St.? — control lines 14 & 15
 

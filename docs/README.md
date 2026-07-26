@@ -1,5 +1,14 @@
 # Project Documentation — Navigation Index
 
+> **Trimmed for the report/presentation (26 Jul 2026).** This `docs/`
+> tree now holds only the figures and phases going into the final report
+> and slides. Phases 07, 10, and 11 (in full), and the supporting/per-line
+> detail from phases 04, 05, 06, 09, and 13, were moved to
+> `../archive/docs/` — nothing was deleted, and the descriptions below
+> still describe the original, untrimmed analysis. Phase 07's role (the
+> "when do blockades happen" question) is now answered by phase 13's
+> `confirmed_hours.csv`/`confirmed_hours_calendar.png` instead.
+
 Prepared for the final course presentation on Israeli Jerusalem bus
 transit EDA (course 71253). Each numbered folder is a report + figures
 covering one phase of the analysis, in dependency order. **Phases 01

@@ -45,7 +45,7 @@ Split into 4 sub-questions, each its own short subsection (state question → me
 
 | # | Question | Method (from) | Figure |
 |---|---|---|---|
-| Q1 | When are blockades happening, and why did lines that share a blocked segment show very different blocked-shares at first? | `docs/07_blockade_investigation` | `missing_fraction_by_line.png` |
+| Q1 | When during the year do blockades happen, and how consistent is the pattern? | `docs/13_full_year_calendar` | `confirmed_hours_calendar.png` |
 | Q2 | When a line's bus detours around a blockade, is the detour actually slower than the normal route? | `docs/05_skip_comparison` | `delta_all_lines.png` |
 | Q3 | Do blockades ripple onto lines that don't even run through the blocked street? (control lines 14 & 15) | `docs/08_control_lines_15_14` | one control-line hourly-pattern figure |
 | Q4 | Lines 9 & 97 share the corridor but not the exact blocked segment — do they reroute, run late, or both? | `docs/09_lines_9_97` | `line_9_blockade_delta.png` or `line_97_blockade_delta.png` |
