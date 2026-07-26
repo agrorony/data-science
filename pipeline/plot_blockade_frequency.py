@@ -26,11 +26,11 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 from matplotlib.colors import ListedColormap
-from matplotlib.patches import Patch
+from matplotlib.patches import Patch, Rectangle
 import numpy as np
 import pandas as pd
 
-from pipeline import config, variant_merges as vm, pooled_analysis as pa
+from pipeline import config, variant_merges as vm, pooled_analysis as pa, stats_tests as st
 
 PROTEST_LINES = [9, 17, 19, 22, 97]
 
@@ -102,7 +102,7 @@ def plot_combined_all_lines(pivots: dict[int, tuple[pd.DataFrame, pd.DataFrame]]
     im = None
     for ax, line in zip(axes_flat, LINE_GRID_ORDER):
         pivot, n_pivot = pivots[line]
-        title = f"Line {line}" + (" (control)" if line in (14, 15) else "")
+        title = f"Line {line}" + (" (control)" if line in (14, 15) else "") + (" (dir A)" if line == 22 else "")
         im = draw_panel(ax, pivot, n_pivot, title, fig, colorbar=False, title_fontsize=11)
 
     for ax in axes_flat[len(LINE_GRID_ORDER):]:
@@ -110,7 +110,8 @@ def plot_combined_all_lines(pivots: dict[int, tuple[pd.DataFrame, pd.DataFrame]]
 
     fig.suptitle(
         "Estimated Blockade Frequency, All Lines\n"
-        "Share of hour-slots (month x day of week) using a non-baseline (blocked) variant, both directions pooled",
+        "Share of hour-slots (month x day of week) using a non-baseline (blocked) variant, both directions pooled "
+        "(line 22: direction A only)",
         fontsize=14, y=0.97,
     )
     cbar = fig.colorbar(im, ax=axes_flat[: len(LINE_GRID_ORDER)], fraction=0.025, pad=0.02, shrink=0.8)
@@ -118,7 +119,8 @@ def plot_combined_all_lines(pivots: dict[int, tuple[pd.DataFrame, pd.DataFrame]]
     fig.text(
         0.5, 0.01,
         "How to read: each panel is one line's month x day-of-week blockade-share heatmap on a shared 0-100% scale, "
-        "so panels are directly comparable; '-' = no data for that cell.",
+        "so panels are directly comparable; '-' = no data for that cell. "
+        + config.LINE_22_DIR_A_FOOTNOTE,
         ha="center", va="top", fontsize=9, wrap=True,
     )
     fig.savefig(out_path, dpi=120, bbox_inches="tight")
@@ -136,7 +138,6 @@ SATURDAY_SUMMARY_GROUPS = [
 def plot_saturday_summary(
     pivots: dict[int, tuple[pd.DataFrame, pd.DataFrame]],
     out_path,
-    line22_dir_a_pivot: tuple[pd.DataFrame, pd.DataFrame] | None = None,
 ) -> None:
     """Rows=lines, columns=months, cell=Saturday blockade share (%), one
     compact panel comparing all lines at a glance. Revision round 3,
@@ -145,22 +146,18 @@ def plot_saturday_summary(
     label between each block, row labels colored via config.LINE_COLORS
     (section A).
 
-    Revision round 4, section B: line 22's row is computed from
-    `line22_dir_a_pivot` (direction_A only) instead of `pivots[22]` (both
-    directions pooled) -- direction_B barely touches the blockade
-    footprint and its nominal share is inflated by non-corridor 1-stop
-    variants (docs/06_blockade_frequency/disagreement_deep_dive.md,
-    Hypothesis 1), so pooling it in would understate line 22's real
-    corridor exposure. Row label becomes "22 (dir A)"."""
+    Revision round 4, section B / fix_22b_central_prompt.md: line 22's row
+    reads `pivots[22]`, which `run()` already computes from direction_A
+    only (config.LINE_22_SHARE_DIRECTION) -- direction_B barely touches the
+    blockade footprint and pooling it in would dilute line 22's real
+    corridor exposure. Row label becomes "22 (dir A)"; no separate
+    direction-A-only computation lives in this function anymore."""
     row_order = [line for _, lines in SATURDAY_SUMMARY_GROUPS for line in lines]
-    line_pivots = dict(pivots)
-    if line22_dir_a_pivot is not None:
-        line_pivots[22] = line22_dir_a_pivot
-    sat_share = pd.DataFrame({line: line_pivots[line][0].loc["Sat"] for line in row_order}).T
-    sat_n = pd.DataFrame({line: line_pivots[line][1].loc["Sat"] for line in row_order}).T
+    sat_share = pd.DataFrame({line: pivots[line][0].loc["Sat"] for line in row_order}).T
+    sat_n = pd.DataFrame({line: pivots[line][1].loc["Sat"] for line in row_order}).T
 
     fig, ax = plt.subplots(figsize=(10, 4.6))
-    row_labels = [f"Line {line} (dir A)" if line == 22 and line22_dir_a_pivot is not None else f"Line {line}" for line in row_order]
+    row_labels = [f"Line {line} (dir A)" if line == 22 else f"Line {line}" for line in row_order]
     im = ax.imshow(sat_share.values, cmap="Reds", vmin=0, vmax=1, aspect="auto")
     ax.set_xticks(range(len(MONTH_ORDER)))
     ax.set_xticklabels(MONTH_LABELS)
@@ -197,10 +194,8 @@ def plot_saturday_summary(
         0.5, -0.05,
         "How to read: blockades concentrate on Saturdays project-wide (docs/06_blockade_frequency/README.md); this "
         "panel isolates the Saturday row of every line's heatmap so the seven lines can be compared at a glance. "
-        "Rows are grouped and separated by physical exposure to the closure (see group labels at left). Line 22's "
-        "row is computed from direction_A only -- direction_B barely touches the blockade footprint and its share "
-        "is inflated by non-corridor variants, so it is excluded from this row entirely (see "
-        "docs/06_blockade_frequency/disagreement_deep_dive.md and docs/06_blockade_frequency/line_22/README.md).",
+        "Rows are grouped and separated by physical exposure to the closure (see group labels at left). "
+        + config.LINE_22_DIR_A_FOOTNOTE,
         ha="center", va="top", fontsize=8, wrap=True,
     )
     fig.subplots_adjust(left=0.24)
@@ -305,30 +300,33 @@ TIMELINE_ROWS = [
     (22, "direction_A"), (22, "direction_B"),
 ]
 TIMELINE_HOURS = list(range(19, 25))
-STATUS_ORDER = ["not_operating", "regular", "blocked"]
-STATUS_COLORS = {"not_operating": "#eeeeee", "regular": "#4C72B0", "blocked": "#d62728"}
 
 
-def saturday_evening_status_grid(blocks: pd.DataFrame) -> pd.DataFrame:
-    """Majority-vote status (blocked / regular / not operating) per
-    (line, direction) row and Saturday hour 19:00-24:00, aggregated across
-    every Saturday in the data (a single hour-slot's status varies month to
-    month; this collapses it to whichever status is more common). A cell is
-    'blocked' if more than half of that row/hour's distinct hour-slots ran
-    a blocked variant, 'regular' if it has data and isn't majority-blocked,
-    else 'not_operating'."""
+def saturday_evening_share_grid(blocks: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+    """Per (line, direction) row and Saturday evening hour (19:00-24:00): the
+    share of Saturdays with data for that slot on which the line ran a
+    blocked (`variant_type_v2 == "blocked"`) variant. A "Saturday" is one
+    distinct month's worth of Saturday data (the finest granularity the
+    aggregated data has -- there is no per-calendar-date column). Returns
+    (share, k, n) where share = k/n (NaN when n == 0, i.e. that
+    line/direction never ran that hour on any Saturday), k = count of
+    blocked Saturdays, n = count of Saturdays with data, both per cell."""
     sat = blocks[blocks["day_label"] == "Sat"]
     row_labels = [f"{line}{direction[-1]}" for line, direction in TIMELINE_ROWS]
-    grid = pd.DataFrame(index=row_labels, columns=TIMELINE_HOURS, dtype=object)
+    k_rows, n_rows = {}, {}
     for (line, direction), row_label in zip(TIMELINE_ROWS, row_labels):
         sub = sat[(sat["route_name"] == line) & (sat["direction_group"] == direction)]
+        k_row, n_row = [], []
         for h in TIMELINE_HOURS:
             s = sub[sub["scheduled_departure_time"] == h]
-            if s.empty:
-                grid.loc[row_label, h] = "not_operating"
-            else:
-                grid.loc[row_label, h] = "blocked" if s["is_non_baseline"].mean() > 0.5 else "regular"
-    return grid
+            n_row.append(int(s["month"].nunique()))
+            k_row.append(int(s.loc[s["is_non_baseline"], "month"].nunique()))
+        k_rows[row_label] = k_row
+        n_rows[row_label] = n_row
+    k_df = pd.DataFrame.from_dict(k_rows, orient="index", columns=TIMELINE_HOURS)
+    n_df = pd.DataFrame.from_dict(n_rows, orient="index", columns=TIMELINE_HOURS)
+    share = (k_df / n_df.replace(0, np.nan)).astype(float)
+    return share, k_df, n_df
 
 
 def line22b_passthrough_cost(effective_df: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
@@ -354,36 +352,70 @@ def line22b_passthrough_cost(effective_df: pd.DataFrame) -> tuple[pd.DataFrame, 
     return ref, summary
 
 
+def line22b_passthrough_stats(ref: pd.DataFrame) -> dict:
+    """docs/12_statistics comparison -- 22B reference-route travel time,
+    17/19-blockade Saturday slot (n=21) vs. other Saturday slot (n=5),
+    unmatched (these are not day/hour-matched pairs, just two pools of
+    Saturday slots). Small control group -- expect a wide CI."""
+    a = ref.loc[ref["group"] == "17/19 blockade slot", "end_time_min"].to_numpy()
+    b = ref.loc[ref["group"] == "other Saturday slot", "end_time_min"].to_numpy()
+    return st.run_full_comparison(a, b)
+
+
 def plot_saturday_timeline_and_cost_22b(blocks: pd.DataFrame, effective_df: pd.DataFrame, out_path) -> dict:
-    grid = saturday_evening_status_grid(blocks)
-    _, summary = line22b_passthrough_cost(effective_df)
+    share, k_df, n_df = saturday_evening_share_grid(blocks)
+    ref, summary = line22b_passthrough_cost(effective_df)
+    passthrough_stats = line22b_passthrough_stats(ref)
 
-    fig, (ax_top, ax_bottom) = plt.subplots(2, 1, figsize=(9, 9.5), gridspec_kw={"height_ratios": [1, 0.9]})
+    fig, (ax_top, ax_bottom) = plt.subplots(2, 1, figsize=(9, 10.3), gridspec_kw={"height_ratios": [1, 0.9]})
 
-    cmap = ListedColormap([STATUS_COLORS[s] for s in STATUS_ORDER])
-    status_to_int = {s: i for i, s in enumerate(STATUS_ORDER)}
-    grid_num = grid.map(lambda v: status_to_int[v]).values.astype(float)
-    ax_top.imshow(grid_num, cmap=cmap, vmin=0, vmax=len(STATUS_ORDER) - 1, aspect="auto")
+    share_arr = share.values.astype(float)
+    n_arr = n_df.values
+    cmap = matplotlib.colormaps["Reds"].copy()
+    cmap.set_bad(color="white")
+    im = ax_top.imshow(np.ma.masked_invalid(share_arr), cmap=cmap, vmin=0, vmax=1, aspect="auto")
+
+    for i in range(share_arr.shape[0]):
+        for j in range(share_arr.shape[1]):
+            if n_arr[i, j] == 0:
+                ax_top.add_patch(Rectangle(
+                    (j - 0.5, i - 0.5), 1, 1,
+                    facecolor="#cfcfcf", hatch="///", edgecolor="white", linewidth=0.5,
+                ))
+            else:
+                val = share_arr[i, j]
+                color = "white" if val > 0.55 else "black"
+                ax_top.text(j, i, f"{k_df.values[i, j]}/{n_arr[i, j]}", ha="center", va="center", fontsize=8, color=color)
+
     ax_top.set_xticks(range(len(TIMELINE_HOURS)))
     ax_top.set_xticklabels([f"{h % 24:02d}:00" for h in TIMELINE_HOURS])
-    ax_top.set_yticks(range(len(grid.index)))
-    ax_top.set_yticklabels(grid.index)
+    ax_top.set_yticks(range(len(share.index)))
+    ax_top.set_yticklabels(share.index)
     row_line = {f"{line}{direction[-1]}": line for line, direction in TIMELINE_ROWS}
-    for row_label, tick in zip(grid.index, ax_top.get_yticklabels()):
+    for row_label, tick in zip(share.index, ax_top.get_yticklabels()):
         tick.set_color(config.LINE_COLORS[row_line[row_label]])
         tick.set_fontweight("bold")
     ax_top.set_xlabel("Saturday hour of day")
-    ax_top.set_title("Saturday Evening, 19:00-24:00: Who Detours, Who Keeps Running", fontsize=12, fontweight="bold")
-    legend = [
-        Patch(color=STATUS_COLORS["blocked"], label="Blocked (majority of Saturdays)"),
-        Patch(color=STATUS_COLORS["regular"], label="Regular/reference (majority)"),
-        Patch(color=STATUS_COLORS["not_operating"], label="Not operating"),
-    ]
-    ax_top.legend(handles=legend, loc="upper left", bbox_to_anchor=(1.02, 1), fontsize=8, borderaxespad=0)
+
+    sat = blocks[blocks["day_label"] == "Sat"]
+    months_present = sorted(sat["month"].unique())
+    n_saturdays_max = len(months_present)
+    month_range = f"{MONTH_LABELS[months_present[0] - 1]}-{MONTH_LABELS[months_present[-1] - 1]}" if months_present else "n/a"
+    subtitle = (
+        f"Each cell: share of the Saturdays with data for that slot (up to {n_saturdays_max}, months "
+        f"{month_range}) on which the line ran a detour (blocked) variant; k/n Saturdays printed in each cell."
+    )
+    fig.suptitle("Saturday Evening, 19:00-24:00: Who Detours, Who Keeps Running", fontsize=12, fontweight="bold", y=0.995)
+    fig.text(0.5, 0.955, subtitle, ha="center", va="top", fontsize=8.5, style="italic")
+
+    cbar = fig.colorbar(im, ax=ax_top, fraction=0.046, pad=0.04)
+    cbar.set_label("Share of Saturdays on a detour variant")
+    legend = [Patch(facecolor="#cfcfcf", hatch="///", edgecolor="white", label="No service / no data")]
+    ax_top.legend(handles=legend, loc="upper left", bbox_to_anchor=(1.32, 1), fontsize=8, borderaxespad=0, frameon=False)
 
     order = ["17/19 blockade slot", "other Saturday slot"]
     x = range(len(order))
-    bar_colors = [STATUS_COLORS["blocked"], STATUS_COLORS["regular"]]
+    bar_colors = ["#d62728", "#4C72B0"]
     ax_bottom.bar(x, summary["mean"], color=bar_colors, alpha=0.75, width=0.5)
     for xi, grp in zip(x, order):
         row = summary.loc[grp]
@@ -395,22 +427,31 @@ def plot_saturday_timeline_and_cost_22b(blocks: pd.DataFrame, effective_df: pd.D
     ax_bottom.grid(axis="y", alpha=0.3)
 
     gap = summary.loc["17/19 blockade slot", "mean"] - summary.loc["other Saturday slot", "mean"]
+    row_22b = share.loc["22B"].dropna()
+    b22_desc = (
+        "22B's share is 0% throughout (its non-reference variants are non-corridor 1-stop swaps, never a real "
+        "detour -- variant_merges.LINE_22_NON_CORRIDOR_DIRECTION)"
+        if row_22b.max() == 0
+        else f"22B's share stays low ({row_22b.min():.0%}-{row_22b.max():.0%}) throughout"
+    )
     caption = (
-        "How to read: top -- majority Saturday status per line-direction and evening hour, aggregated across every "
-        "Saturday in the data; 17A/17B/19A/19B/22A all shift from blocked to regular later in the evening, but 22B "
-        "is regular-majority almost throughout -- it doesn't detour around the closure, it drives through it. "
+        "How to read: top -- share of Saturdays each line-direction ran a detour variant at that evening hour "
+        f"(k/n Saturdays with data, see subtitle above); 17A/17B/19A/19B/22A start near 100% early evening and taper "
+        f"off as regular service resumes later, but {b22_desc} -- it doesn't detour "
+        "around the closure, it drives through it. "
         f"Bottom -- 22B's own reference-route travel time in the n={int(summary.loc['17/19 blockade slot','n'])} "
         f"Saturday slots when 17/19 were actually blocked vs. the n={int(summary.loc['other Saturday slot','n'])} "
         "other Saturday slots it ran its reference route (small control group -- treat as suggestive, not "
         f"conclusive). It pays {gap:+.1f} min passing through during the blockade window "
-        "(docs/06_blockade_frequency/disagreement_deep_dive.md)."
+        "(docs/06_blockade_frequency/disagreement_deep_dive.md). "
+        f"Statistical test (docs/12_statistics, n=5 control group -- small n): {st.format_delta_annotation(passthrough_stats)}."
     )
     fig.text(0.5, -0.03, caption, ha="center", va="top", fontsize=8, wrap=True)
-    fig.tight_layout()
+    fig.tight_layout(rect=[0, 0, 1, 0.93])
     fig.savefig(out_path, dpi=120, bbox_inches="tight")
     plt.close(fig)
     print(f"Saved -> {out_path}  (gap={gap:+.1f} min, {dict(summary['n'])})")
-    return {"grid": grid, "cost_summary": summary, "gap_min": gap}
+    return {"share": share, "k": k_df, "n": n_df, "cost_summary": summary, "gap_min": gap}
 
 
 def run() -> None:
@@ -420,23 +461,38 @@ def run() -> None:
 
     pivots: dict[int, tuple[pd.DataFrame, pd.DataFrame]] = {}
     for line, line_blocks in blocks.groupby("route_name"):
+        # fix_22b_central_prompt.md -- line 22 pooled both-directions is
+        # still diluted by direction_B's untouched-by-the-closure schedule
+        # even after the central non_corridor fix (its full denominator
+        # counts, it just never contributes to the numerator), so every
+        # aggregate figure reports line 22 from direction_A only
+        # (config.LINE_22_SHARE_DIRECTION). Storing the direction_A-only
+        # pivot under pivots[22] means every downstream consumer of
+        # `pivots` (plot_combined_all_lines, plot_saturday_summary) gets
+        # the corrected line automatically, with one computation.
+        is_line22 = line == 22
+        if is_line22:
+            line_blocks = line_blocks[line_blocks["direction_group"] == config.LINE_22_SHARE_DIRECTION]
         pivot, n_pivot = fraction_pivot(line_blocks)
         pivots[line] = (pivot, n_pivot)
 
         fig, ax = plt.subplots(1, 1, figsize=(9, 5.6))
-        draw_panel(ax, pivot, n_pivot, f"Line {line} -- all directions combined", fig)
+        panel_title = f"Line {line} -- direction A only" if is_line22 else f"Line {line} -- all directions combined"
+        draw_panel(ax, pivot, n_pivot, panel_title, fig)
 
+        pooling_desc = "direction A only" if is_line22 else "both directions pooled"
         fig.suptitle(
             f"Line {line}: Estimated Blockade Frequency\n"
-            "Share of hour-slots (month x day of week) using a non-baseline (blocked) variant, both directions pooled",
+            f"Share of hour-slots (month x day of week) using a non-baseline (blocked) variant, {pooling_desc}",
             fontsize=13,
         )
-        fig.text(
-            0.5, -0.02,
+        caption = (
             "How to read: each cell is the share of that month/day-of-week's hour-slots whose bus ran a non-baseline "
-            "(blocked, >15-stop) variant, both directions of the line pooled together; '-' = no data for that cell.",
-            ha="center", va="top", fontsize=8, wrap=True,
+            f"(blocked, >15-stop) variant, {pooling_desc}; '-' = no data for that cell."
         )
+        if is_line22:
+            caption += " " + config.LINE_22_DIR_A_FOOTNOTE
+        fig.text(0.5, -0.02, caption, ha="center", va="top", fontsize=8, wrap=True)
         fig.tight_layout(rect=[0, 0, 1, 0.88])
         out_path = config.FIGURES_DIR / f"blockade_frequency_{line}.png"
         fig.savefig(out_path, dpi=120, bbox_inches="tight")
@@ -448,11 +504,8 @@ def run() -> None:
             shutil.copy2(out_path, docs_line_dir / out_path.name)
             print(f"Synced -> {docs_line_dir / out_path.name}")
 
-    line22_dir_a = blocks[(blocks["route_name"] == 22) & (blocks["direction_group"] == "direction_A")]
-    line22_dir_a_pivot = fraction_pivot(line22_dir_a)
-
     plot_combined_all_lines(pivots, OUT_DIR / "blockade_all_lines.png")
-    plot_saturday_summary(pivots, OUT_DIR / "blockade_saturday_summary.png", line22_dir_a_pivot=line22_dir_a_pivot)
+    plot_saturday_summary(pivots, OUT_DIR / "blockade_saturday_summary.png")
 
     disagreement_table = plot_disagreement_windows(blocks, OUT_DIR / "disagreement_windows.png")
     disagreement_csv = OUT_DIR / "disagreement_windows.csv"
@@ -462,7 +515,14 @@ def run() -> None:
     effective_df_full, _ = vm.build_effective_df_cleaned()
     line22_dir = OUT_DIR / "line_22"
     line22_dir.mkdir(parents=True, exist_ok=True)
-    plot_saturday_timeline_and_cost_22b(blocks, effective_df_full, line22_dir / "saturday_timeline_and_cost_22B.png")
+    timeline_result = plot_saturday_timeline_and_cost_22b(
+        blocks, effective_df_full, line22_dir / "saturday_timeline_and_cost_22B.png"
+    )
+    kn_table = timeline_result["k"].astype(str) + "/" + timeline_result["n"].astype(str)
+    kn_table.index.name = "line_direction"
+    kn_csv = line22_dir / "saturday_timeline_data.csv"
+    kn_table.to_csv(kn_csv)
+    print(f"Saved -> {kn_csv}")
 
 
 if __name__ == "__main__":

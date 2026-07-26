@@ -1,0 +1,5 @@
+direction_group,route_variant_id,variant_type_v2,n_december_blocks,missing_stop_codes,n_missing,overlap_with_corridor_footprint
+direction_A,0,reference,101,[],0,0
+direction_A,1,blocked,4,"[1079, 1484, 1575, 3857]",4,3
+direction_B,1,non_corridor,101,[6028],1,0
+direction_B,4,non_corridor,3,"[4175, 6028]",2,0

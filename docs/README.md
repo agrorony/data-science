@@ -53,6 +53,47 @@ does instead of detouring — it drives through the closure on its
 reference route at a small (~5 min) time cost, rather than rerouting
 like every other shared-corridor line/direction.
 
+## Central "never blocked" classification rule (`fix_22b_central_prompt.md`)
+
+Two lines have a permanent exception carved into `variant_type_v2`
+itself, in `pipeline/variant_merges.py`, so every phase that reads that
+column inherits the exception automatically instead of needing its own
+special case:
+
+- **Line 14, all directions → `"noise"`.** Its non-reference variants are
+  stop-recording dropouts, not detours (see
+  [line_14/blocked_slots_investigation.md](06_blockade_frequency/line_14/blocked_slots_investigation.md)).
+- **Line 22 direction_B → `"non_corridor"`.** Its non-reference variants
+  are real, identified route deviations, but ones that don't touch the
+  17/19 blockade footprint — 1-stop swaps elsewhere on the route, not
+  corridor detours (see
+  [disagreement_deep_dive.md](06_blockade_frequency/disagreement_deep_dive.md)
+  and its own diagnosis and recommended fix in
+  [docs/11's Part B](11_deep_dive_candidate_windows/README.md#part-b--line-22s-december-pattern-was-a-classification-artifact-now-fixed)).
+  Direction_A is untouched — its real closure variant clears the >15-stop
+  rule on its own.
+
+Both get a distinct label (`"noise"` vs `"non_corridor"`) because the
+underlying reason differs, but the practical effect is the same: neither
+is ever `"blocked"`, anywhere, in any phase. A regression guard,
+`pipeline.variant_merges.assert_no_false_blockades`, runs inside
+`build_effective_df_cleaned` and raises if either exception is ever
+violated — this is what should prevent a fourth recurrence of the bug
+`fix_22b_central_prompt.md` fixed (it had already resurfaced twice: once
+in the original `disagreement_deep_dive.md` diagnosis, once independently
+in [docs/11's Part B](11_deep_dive_candidate_windows/README.md)).
+
+Separately, **line 22's aggregate/share figures use direction_A only**
+(`pipeline.config.LINE_22_SHARE_DIRECTION`) — this is a *different*,
+additional rule, not a consequence of the classification fix above:
+even with direction_B correctly never counted as blocked, pooling it into
+a share/percentage still dilutes the denominator with its
+untouched-by-the-closure schedule. Every figure that reports a single
+pooled number for line 22 (phases 05, 06, 10) uses direction_A only and
+carries a fixed footnote (`pipeline.config.LINE_22_DIR_A_FOOTNOTE`);
+figures that legitimately show direction_A and direction_B as separate
+rows/columns (the Saturday timeline, the disagreement windows) do not.
+
 ## Color palette (revision round 3, section A)
 
 One fixed color per line, defined once in `pipeline.config.LINE_COLORS`
@@ -154,6 +195,57 @@ shifted — only the two new blues for 14/15 are new.
    despite saving time overall. Round 3: fixed a legend overlapping the
    data in both figures (section H). **Round 4:** verified unaffected —
    line 14 never appears in this phase.
+10. **[Candidate (month, day-of-week) windows](10_candidate_windows/README.md)**
+    *(new, scan only)* — full-year, all-7-lines scan for cells where
+    several lines simultaneously show a similar, moderate,
+    non-saturating blocked-share (the opposite signal from phase 06's
+    disagreement deep dive) worth an hour-level follow-up. Produced a
+    ranked candidate list; no hour-level investigation run yet in this
+    phase — that's phase 11.
+11. **[Deep dive on candidate windows + line 22 December check](11_deep_dive_candidate_windows/README.md)**
+    *(new; Part B's fix now applied centrally)* — hour-level deep dive on
+    phase 10's three top-ranked candidate cells (Nov Wed, Dec Wed, Oct
+    Mon), replicating phase 06's disagreement-deep-dive method (per-slot
+    `variant_type_v2`, footprint stop-overlap, timing spread). Found all
+    three cells contain a real, footprint-consistent shared-corridor
+    closure at specific hours (full strength in Nov, partial/weaker in
+    Dec and Oct), and — as a required check before trusting it — found
+    line 22's December pattern to be mostly a direction_B classification
+    artifact (a trivial, off-footprint variant ran on 100% of its
+    December trips, vs. 1–14% every other month) layered on top of a
+    small, genuinely real direction_A closure on Wednesday only. Its
+    recommended fix is now applied project-wide — see "Central
+    'never blocked' classification rule" above.
+12. **[Statistical backing](12_statistics/README.md)** *(new)* —
+    nonparametric statistical backing (permutation tests + bootstrap CIs +
+    Cliff's delta, one reusable engine in `pipeline/stats_tests.py`) for
+    the 12 key comparisons already made across phases 05, 06 (line 22B),
+    08 and 09: every phase 05 line's blocked-vs-baseline saving is
+    statistically supported; neither control line's phase 08 effect is,
+    once tested with a day/hour-stratified permutation test on all data
+    together; phase 09's route-switching effect is statistically
+    supported for both lines 9/97, its travel-time effect is not (once
+    Saturday and Weekday are combined); and the 22B pass-through cost is
+    statistically supported despite its small (n=5) control group and
+    correspondingly wide CI. Existing figures in the four affected phases
+    were regenerated with a one-line statistical-test annotation added to
+    their captions; nothing else about them changed. Numbered `12` rather
+    than `10` because phase 10 (candidate windows) had already claimed
+    that slot by the time this phase was built.
+13. **[Full-year blockade calendar](13_full_year_calendar/README.md)**
+    *(new)* — redoes and broadens phases 10/11's scan under a simpler,
+    relaxed rule (≥3 lines independently >10% blocked-share, no
+    saturation/baseline/n-floor exclusions), flagging 21 (month,
+    day-of-week) cells across the year, then runs the hour-level
+    confirmation method on every one of them (no manual approval gate).
+    Converts each flagged cell's share into a plain confirmed-hour-range
+    answer using a strict per-hour rule (≥3 lines simultaneously pure,
+    n≥8, and blocked). All three of phase 11's cells reappear with
+    consistent (reconciled, not contradictory) confirmed ranges; 11
+    Saturdays confirm the already-known 19:00–24:00-ish evening pattern;
+    7 new weekday cells (May Mon/Tue/Sun, Jun Mon, Apr Mon/Wed/Thu) are
+    confirmed for the first time. Numbered `13` because `12` was already
+    taken by the statistics phase.
 
 ## What changed numerically, first pass → this revision
 
@@ -228,8 +320,38 @@ to round 3.
 | Line 22 Saturday summary row (docs/06) | Both directions pooled, 51.2% | **Direction_A only**, "22 (dir A)" — see [line_22](06_blockade_frequency/line_22/README.md) |
 | Line 22 overall/per-line-panel share (docs/06) | 11.7% / 51.2% | **Unchanged** (both directions still pooled outside the Saturday summary) |
 
+## What changed numerically, round 4 → `fix_22b_central_prompt.md`
+
+Only line 22's classification/pooling changed
+(`pipeline/variant_merges.py`, `pipeline/config.py`); every other line's
+numbers below are unaffected.
+
+| Metric | Before this fix | After this fix |
+|---|---|---|
+| Line 22 overall blockade share (docs/06) | 11.7% (both directions pooled, n=2,267) | **9.9%** (direction_A only, n=1,136) |
+| Line 22 Saturday blockade share (docs/06) | 51.2% (pooled, n=80) | **69.0%** (direction_A only, n=42) |
+| Line 22 per-line/all-lines-grid figures (docs/06) | Both directions pooled | **Direction_A only**, labeled "(dir A)" + footnote |
+| Line 22 phase 05 n blocked / delta | 210 / −3.1 min (pooled) | **81 / −8.4 min** (direction_A only, plot and stats now agree) |
+| Line 22 detour-distance panel (docs/05) | direction_B, ~flat +0.9% | **direction_A, −7.1%** (was resolving to the wrong direction) |
+| Phase 08/09 blockade window count | 320 slots (36 Sat, 284 Weekday) | **208 slots** (36 Sat, 172 Weekday) |
+| Phase 08 line 14 Weekday effect | tests disagree (MWU p=0.07, t p=0.006) | **both tests agree, ns** (MWU p=0.16, t p=0.06) |
+| Phase 09 line 9 route-share effect (docs/12) | +24.6pp [+20.4, +29.0] | **+48.3pp** [+41.4, +55.2] |
+| Phase 09 line 97 route-share effect (docs/12) | +13.5pp [+10.6, +16.5] | **+22.4pp** [+18.1, +27.0] |
+| Phase 09 line 97 travel-time effect (docs/12) | suggestive, p=0.9997 | **statistically supported**, −1.2 min, p=0.005 |
+| Docs/10 candidate rank #2 (Dec Wed) line-22 share | 61% (pooled, flagged as unreliable) | **21%** (direction_A only, now reliable and consistent with the cell's other lines) |
+
+**Read together:** this was a correctness fix, not a re-tuning — line
+22's real corridor exposure was previously *diluted* in every pooled
+aggregate (denominator inflated by direction_B's untouched-by-the-closure
+schedule) while simultaneously being *inflated* in a few specific spots
+where direction_B's own non-corridor variants happened to clear the
+>15-stop threshold (docs/10 rank #2, docs/11 Part B). Centralizing the
+classification and the direction_A-only aggregate policy fixes both
+directions of error from one place, and the regression guard
+(`assert_no_false_blockades`) is meant to keep it fixed.
+
 **Sources:** `prompts/revision_round_prompt.md`,
 `prompts/revision_round_2_prompt.md`, `prompts/revision_round_3_prompt.md`,
-`prompts/revision_round_4_prompt.md`,
+`prompts/revision_round_4_prompt.md`, `prompts/fix_22b_central_prompt.md`,
 `govData/variant_merges.json`, `pipeline/variant_merges.py`,
 `pipeline/pooled_analysis.py`, `pipeline/config.py`.

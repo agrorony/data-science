@@ -1,0 +1,22 @@
+month,month_label,day_label,n_lines_elevated,lines_elevated_list,lines_elevated,any_low_n,documented_elsewhere,documented_reason
+1,Jan,Sat,5,"[9, 17, 19, 22, 97]","19:56%(n=9), 9:50%(n=10), 22:50%(n=6*), 97:50%(n=12), 17:45%(n=11)",True,True,"Saturday pattern already documented in docs/06_blockade_frequency (see disagreement_deep_dive.md for the line 22B nuance, now fixed centrally)"
+2,Feb,Sat,5,"[9, 17, 19, 22, 97]","9:80%(n=10), 17:60%(n=10), 19:60%(n=10), 22:60%(n=5*), 97:60%(n=10)",True,True,"Saturday pattern already documented in docs/06_blockade_frequency (see disagreement_deep_dive.md for the line 22B nuance, now fixed centrally)"
+3,Mar,Sat,5,"[9, 17, 19, 22, 97]","9:80%(n=10), 97:80%(n=10), 17:75%(n=8), 19:75%(n=4*), 22:75%(n=4*)",True,True,"Saturday pattern already documented in docs/06_blockade_frequency (see disagreement_deep_dive.md for the line 22B nuance, now fixed centrally)"
+4,Apr,Sat,5,"[9, 17, 19, 22, 97]","9:100%(n=3*), 17:100%(n=4*), 97:100%(n=7*), 19:75%(n=4*), 22:50%(n=2*)",True,True,"Saturday pattern already documented in docs/06_blockade_frequency (see disagreement_deep_dive.md for the line 22B nuance, now fixed centrally)"
+5,May,Mon,5,"[9, 15, 17, 19, 22]","22:94%(n=17), 17:90%(n=10), 9:85%(n=13), 19:85%(n=26), 15:15%(n=20)",False,False,not previously examined at hour level
+5,May,Sat,5,"[9, 17, 19, 22, 97]","9:100%(n=3*), 17:100%(n=3*), 19:100%(n=3*), 22:100%(n=3*), 97:100%(n=4*)",True,True,"Saturday pattern already documented in docs/06_blockade_frequency (see disagreement_deep_dive.md for the line 22B nuance, now fixed centrally)"
+6,Jun,Sat,5,"[9, 17, 19, 22, 97]","9:100%(n=6*), 17:100%(n=6*), 97:100%(n=7*), 19:67%(n=6*), 22:67%(n=3*)",True,True,"Saturday pattern already documented in docs/06_blockade_frequency (see disagreement_deep_dive.md for the line 22B nuance, now fixed centrally)"
+7,Jul,Sat,5,"[9, 17, 19, 22, 97]","9:100%(n=6*), 19:100%(n=6*), 17:86%(n=7*), 97:75%(n=8), 22:67%(n=3*)",True,True,"Saturday pattern already documented in docs/06_blockade_frequency (see disagreement_deep_dive.md for the line 22B nuance, now fixed centrally)"
+8,Aug,Sat,5,"[9, 17, 19, 22, 97]","17:100%(n=6*), 9:83%(n=6*), 19:83%(n=6*), 22:67%(n=3*), 97:50%(n=8)",True,True,"Saturday pattern already documented in docs/06_blockade_frequency (see disagreement_deep_dive.md for the line 22B nuance, now fixed centrally)"
+9,Sep,Sat,5,"[9, 17, 19, 22, 97]","9:100%(n=7*), 17:100%(n=8), 22:100%(n=3*), 19:88%(n=8), 97:70%(n=10)",True,True,"Saturday pattern already documented in docs/06_blockade_frequency (see disagreement_deep_dive.md for the line 22B nuance, now fixed centrally)"
+10,Oct,Sat,5,"[9, 17, 19, 22, 97]","9:100%(n=6*), 17:100%(n=8), 19:88%(n=8), 22:75%(n=4*), 97:40%(n=10)",True,True,"Saturday pattern already documented in docs/06_blockade_frequency (see disagreement_deep_dive.md for the line 22B nuance, now fixed centrally)"
+11,Nov,Sat,5,"[9, 17, 19, 22, 97]","9:90%(n=10), 17:80%(n=10), 22:80%(n=5*), 19:70%(n=10), 97:67%(n=12)",True,True,"Saturday pattern already documented in docs/06_blockade_frequency (see disagreement_deep_dive.md for the line 22B nuance, now fixed centrally)"
+11,Nov,Wed,5,"[9, 17, 19, 22, 97]","17:67%(n=21), 9:55%(n=29), 22:53%(n=19), 19:51%(n=43), 97:35%(n=37)",False,True,hour-level deep dive already done in docs/11_deep_dive_candidate_windows/README.md
+12,Dec,Wed,5,"[9, 17, 19, 22, 97]","22:21%(n=19), 19:20%(n=41), 17:19%(n=21), 9:16%(n=32), 97:14%(n=36)",False,True,hour-level deep dive already done in docs/11_deep_dive_candidate_windows/README.md
+5,May,Tue,4,"[9, 17, 19, 22]","17:86%(n=7*), 22:75%(n=16), 19:64%(n=25), 9:50%(n=10)",True,False,not previously examined at hour level
+6,Jun,Mon,4,"[9, 17, 19, 22]","17:29%(n=7*), 19:22%(n=37), 9:15%(n=20), 22:13%(n=15)",True,False,not previously examined at hour level
+10,Oct,Mon,4,"[9, 17, 19, 22]","17:55%(n=11), 19:50%(n=42), 22:50%(n=18), 9:17%(n=23)",False,True,hour-level deep dive already done in docs/11_deep_dive_candidate_windows/README.md
+4,Apr,Mon,3,"[17, 19, 22]","17:20%(n=15), 19:18%(n=40), 22:12%(n=16)",False,False,not previously examined at hour level
+4,Apr,Thu,3,"[17, 19, 22]","22:42%(n=19), 17:38%(n=16), 19:32%(n=38)",False,False,not previously examined at hour level
+4,Apr,Wed,3,"[17, 19, 22]","19:29%(n=41), 17:21%(n=14), 22:19%(n=16)",False,False,not previously examined at hour level
+5,May,Sun,3,"[17, 19, 22]","17:60%(n=10), 19:43%(n=23), 22:32%(n=19)",False,False,not previously examined at hour level

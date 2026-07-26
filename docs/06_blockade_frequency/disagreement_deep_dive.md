@@ -2,6 +2,19 @@
 
 *Analysis of all disagreement windows, without the 0.9/0.7 thresholds. Data: effective (merged, post-exclusion) variant set, `variant_type_v2` (>15-stop rule).*
 
+**Status: fixed centrally, `fix_22b_central_prompt.md`.** This document's
+own candidate figure #4 below (recompute 22B's share counting only
+corridor-footprint variants as "blocked") is exactly what
+`pipeline.variant_merges.LINE_22_NON_CORRIDOR_DIRECTION` now does: line 22
+direction_B's non-reference variants are forced to `"non_corridor"`
+project-wide, so its share reads 0% everywhere, not just in one recomputed
+figure. The numbers on this page (32%, 69%, the 10-stop footprint, etc.)
+describe the state of the data **as investigated at the time** and remain
+an accurate record of the diagnosis; they are not live numbers and are no
+longer recomputed elsewhere in the project the way they were before this
+fix (see [line_22/README.md](line_22/README.md) and
+[docs/06_blockade_frequency/README.md](README.md) for current figures).
+
 ## The disagreement, quantified
 
 Relaxing the thresholds to "any window where the max share ≥30% and the gap between lines ≥25pp" yields **15 disagreement windows** (vs the handful found before). In **14 of 15, line 22 is the low outlier** — usually at 0% while 17 and 19 are at 40–100%. Splitting by direction pins it down entirely:

@@ -47,7 +47,7 @@ import numpy as np
 import pandas as pd
 from scipy import stats
 
-from pipeline import config, variant_merges as vm, pooled_analysis as pa
+from pipeline import config, variant_merges as vm, pooled_analysis as pa, stats_tests as st
 from pipeline import plot_baseline_vs_blocked_delta as pbd
 
 OUT_DIR = config.REPO_ROOT / "docs" / "09_lines_9_97"
@@ -96,6 +96,35 @@ def tag_windows(blocks: pd.DataFrame, windows: pd.DataFrame) -> pd.DataFrame:
 # ---------------------------------------------------------------------------
 # (a) Route affected: variant-share comparison
 # ---------------------------------------------------------------------------
+
+
+def _strata_key(df: pd.DataFrame) -> np.ndarray:
+    """The (day_of_week, hour) match key `tag_windows` built the
+    blockade/matched_normal grouping on."""
+    return (df["day_of_week"].astype(str) + "_" + df["scheduled_departure_time"].astype(str)).to_numpy()
+
+
+def phase09_route_stats(tagged_all: pd.DataFrame) -> dict:
+    """docs/12_statistics comparison (a) -- own non-baseline (blocked)
+    variant share, blockade window vs. matched normal, Saturday+Weekday
+    together, permutation on the binary blocked indicator per slot,
+    stratified by (day_of_week, hour)."""
+    blk = tagged_all[tagged_all["group"] == "blockade"]
+    norm = tagged_all[tagged_all["group"] == "matched_normal"]
+    a = (blk["variant_type_v2"] == "blocked").astype(int).to_numpy()
+    b = (norm["variant_type_v2"] == "blocked").astype(int).to_numpy()
+    return st.run_full_comparison(a, b, strata_a=_strata_key(blk), strata_b=_strata_key(norm))
+
+
+def phase09_time_stats(tagged_baseline: pd.DataFrame) -> dict:
+    """docs/12_statistics comparison (b) -- own baseline-variant travel
+    time, blockade window vs. matched normal, Saturday+Weekday together,
+    stratified by (day_of_week, hour)."""
+    blk = tagged_baseline[tagged_baseline["group"] == "blockade"]
+    norm = tagged_baseline[tagged_baseline["group"] == "matched_normal"]
+    a = blk["mean_cumulative_travel_time_min"].to_numpy()
+    b = norm["mean_cumulative_travel_time_min"].to_numpy()
+    return st.run_full_comparison(a, b, strata_a=_strata_key(blk), strata_b=_strata_key(norm))
 
 
 def _proportion_test(a: int, b: int, c: int, d: int) -> tuple[str, float]:
@@ -192,7 +221,7 @@ def _stars(p: float) -> str:
 # ---------------------------------------------------------------------------
 
 
-def plot_variant_share(share_rows: list[dict], line_label: str, out_path) -> None:
+def plot_variant_share(share_rows: list[dict], line_label: str, out_path, stats_result: dict | None = None) -> None:
     fig, ax = plt.subplots(figsize=(6.5, 5))
 
     cats = [r["category"] for r in share_rows]
@@ -228,6 +257,8 @@ def plot_variant_share(share_rows: list[dict], line_label: str, out_path) -> Non
         f"blockade-window hours and matched-normal hours (same day-of-week/scheduled hour, non-flagged month). "
         f"n = total blocks in each group; p-value from Fisher's exact or chi-square (Yates-corrected) test."
     )
+    if stats_result is not None:
+        caption += f" Statistical test (docs/12_statistics, Saturday+Weekday combined, stratified by day/hour): {st.format_delta_annotation(stats_result, as_pct=True)}."
     fig.suptitle(f"{line_label}: Own Route-Variant (Detour) Share, Blockade Window vs Matched Normal", fontsize=12, y=1.08)
     fig.text(0.5, -0.06, caption, ha="center", fontsize=8, style="italic", wrap=True)
     fig.tight_layout()
@@ -235,7 +266,7 @@ def plot_variant_share(share_rows: list[dict], line_label: str, out_path) -> Non
     plt.close(fig)
 
 
-def plot_travel_time(tagged: pd.DataFrame, stats_rows: list[dict], line_label: str, out_path) -> None:
+def plot_travel_time(tagged: pd.DataFrame, stats_rows: list[dict], line_label: str, out_path, stats_result: dict | None = None) -> None:
     fig, axes = plt.subplots(1, len(CATEGORIES), figsize=(13, 4.6), sharey=False)
 
     for j, category in enumerate(CATEGORIES):
@@ -275,6 +306,8 @@ def plot_travel_time(tagged: pd.DataFrame, stats_rows: list[dict], line_label: s
         f"variant only, both directions pooled, n_observations >= {config.LOW_CONFIDENCE_THRESHOLD}) in confirmed "
         f"blockade-window hours vs matched normal hours; Mann-Whitney U tests whether the two distributions differ."
     )
+    if stats_result is not None:
+        caption += f" Statistical test (docs/12_statistics, Saturday+Weekday combined, stratified by day/hour): {st.format_delta_annotation(stats_result)}."
     fig.suptitle(f"{line_label}: Travel-Time Distribution, Blockade Window vs Matched Normal Window", fontsize=13, y=1.08)
     fig.text(0.5, -0.1, caption, ha="center", fontsize=9, style="italic", wrap=True)
     fig.tight_layout(rect=[0, 0.05, 1, 1])
@@ -415,8 +448,9 @@ def run() -> None:
         share_rows = variant_share_comparison(tagged_all, line_label)
         all_share_rows.extend(share_rows)
 
+        route_stats = phase09_route_stats(tagged_all)
         share_path = OUT_DIR / f"{line_label.lower().replace(' ', '_')}_variant_share_comparison.png"
-        plot_variant_share(share_rows, line_label, share_path)
+        plot_variant_share(share_rows, line_label, share_path, stats_result=route_stats)
         print(f"Saved -> {share_path}")
 
         # (b) time affected -- baseline-only blocks, both directions pooled
@@ -425,8 +459,9 @@ def run() -> None:
         time_rows = compare_travel_time(tagged_baseline, line_label)
         all_time_rows.extend(time_rows)
 
+        time_stats = phase09_time_stats(tagged_baseline)
         time_path = OUT_DIR / f"{line_label.lower().replace(' ', '_')}_travel_time_comparison.png"
-        plot_travel_time(tagged_baseline, time_rows, line_label, time_path)
+        plot_travel_time(tagged_baseline, time_rows, line_label, time_path, stats_result=time_stats)
         print(f"Saved -> {time_path}")
 
     # (D) revision round 2 -- own detour vs. absorbing others' blockade
