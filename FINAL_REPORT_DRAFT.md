@@ -57,7 +57,11 @@ Table 2 shows exactly this kind of gap for line 19, direction A: compared with t
 
 In Table 1's reference sequence, the same two stops are `stop_sequence` 16 and 23 as well — but with six rows in between (17–22, listed above) that simply don't exist in this block. Nothing was deleted for the table; this is what the raw data looks like for a trip that skipped Aza St.
 
-To see this pattern across *all* variants of a line at once, rather than one gap at a time, we built a stop-presence heatmap: stops along the x-axis (in reference order), each variant as a row, colored green where the variant visits that stop and white where it doesn't, with rows ordered by how often each variant occurs. This grid makes a shared gap across several of a line's frequent variants immediately visible as a vertical white band — which is how the Aza St. segment was first identified as a recurring, structural gap rather than a one-off (Figure 1; one panel per line, e.g. `docs/03_variants/line_19/variants_raw.png`).
+To see this pattern across *all* variants of a line at once, rather than one gap at a time, we built a stop-presence heatmap: stops along the x-axis (in reference order), each variant as a row, colored green where the variant visits that stop and white where it doesn't, with rows ordered by how often each variant occurs. This grid makes a shared gap across several of a line's frequent variants immediately visible as a vertical white band — which is how the Aza St. segment was first identified as a recurring, structural gap rather than a one-off (Figure 1).
+
+**Figure 1. Line 19's frequent route variants all skip the same six-stop segment on Aza St., revealing a recurring closure rather than random noise.**
+Stop-presence grid for line 19, both directions, one row per route variant observed more than 5 times in the year; green = stop visited that trip, white = stop skipped; stops ordered along the route from first to last.
+*How to read: a vertical white band shared across several variants (rows) marks a segment consistently skipped — this is how the Aza St. closure was first identified. `docs/03_variants/line_19/variants_raw.png`*
 
 Because the year covered by this dataset (2024) included repeated political protests in the area, and Aza St. runs past the Prime Minister's residence, this gap has a concrete real-world explanation: police repeatedly closed the street to traffic, and buses were rerouted around it. This finding is what redirected the project from general travel-pattern exploration toward the specific closure-impact questions in Section 3.
 
@@ -91,9 +95,13 @@ Lines mostly differ in overall level (a roughly constant vertical gap between li
 
 This baseline (no detour) picture is the yardstick the rest of the report measures against: any travel-time effect attributed to a street closure in Section 3 is a deviation from these already-known hourly and per-line patterns, not a first look at how long these lines normally take.
 
-**Figure 2.** Baseline trip duration by line, longest to shortest, mean ± SEM (both directions pooled; std reported per bar). `docs/04_baselines/travel_time_all_lines.png`
+**Figure 2. Line 9 takes more than twice as long end-to-end as line 97, and travel time tracks route length closely across all seven lines.**
+Mean baseline (non-detour) end-to-end trip duration by line, ranked longest to shortest, both directions pooled; std and n reported per bar.
+*How to read: black error bars are ±1 standard error of the mean (SEM = std/√n) — how precisely the mean is known, not how much individual trips vary; std (printed above each bar) answers that second question. `docs/04_baselines/travel_time_all_lines.png`*
 
-**Figure 3.** Baseline travel time by departure hour, all seven lines (±1 SEM shading). `docs/04_baselines/baseline_travel_time_by_hour.png`
+**Figure 3. Every line is slowest in the early afternoon and fastest in the early morning, with each line's relative ranking holding steady all day.**
+Mean baseline end-to-end travel time by scheduled departure hour, one curve per line (fixed color order: 17, 19, 22, 9, 97, 14, 15), both directions pooled; shaded band = ±1 SEM.
+*How to read: curves that rise and fall together share the same daily pattern; the vertical gap between two lines' curves reflects their difference in overall route length, not a difference in when they run slow. `docs/04_baselines/baseline_travel_time_by_hour.png`*
 
 ### 2.4 How often do lines actually detour?
 
@@ -115,7 +123,9 @@ Every line that shares the Aza St. corridor (9, 17, 19, 22, 97) shows the same s
 
 One nuance is worth flagging directly, since it looks like a contradiction at first: on two Saturdays (April, June) where most affected lines sit near 100% blocked, line 22 — and sometimes line 19 — shows a markedly lower share (25–75%) at the exact same hours. Checking each line's individual trip records rules out a scheduling difference: all lines ran the same hour slots, just some of line 22's trips stayed on the normal route instead of detouring. This is genuine differential exposure, not an artifact — line 22's longer route only partially overlaps the closed segment, so a closure evidently doesn't force 100% of its scheduled trips onto a detour the way it does for line 17.
 
-**Figure 5.** Non-baseline variant share by month and day of week, all seven lines, shared colorbar. `docs/06_blockade_frequency/blockade_all_lines.png`
+**Figure 5. The five corridor lines detour on most Saturday trips nearly all year, while control lines 14 and 15 almost never do.**
+Share of hour-slots run on a non-baseline (detour) variant, by month and day of week, one panel per line in fixed order (17, 19, 22, 9, 97, 14, 15); shared 0–100% color scale.
+*How to read: darker red = a larger share of that month/day's trips ran a detour; "-" marks a cell with no data; line 22 is computed from direction A only (see the figure's own footnote). `docs/06_blockade_frequency/blockade_all_lines.png`*
 
 ---
 
@@ -131,7 +141,9 @@ One nuance is worth flagging directly, since it looks like a contradiction at fi
 
 **Conclusion (part 1 of the big question):** closures are concentrated on Saturday evenings essentially year-round, plus a smaller number of specific weekday windows clustered in spring (April–June) and one sustained event each in autumn and early winter.
 
-**Figure 6.** Confirmed blockade hours by month and day of week, full year. `docs/13_full_year_calendar/confirmed_hours_calendar.png`
+**Figure 6. Confirmed closures cluster on Saturday evenings nearly all year, plus a handful of specific weekday windows concentrated in spring.**
+Calendar of (month, day-of-week) cells where at least 3 lines independently and reliably ran a detour variant in the same hour; confirmed cells list the exact hour range.
+*How to read: red cells show the confirmed detour hour range; pink cells were flagged but did not clear the reliability bar (reason noted in the cell); grey cells were never flagged. `docs/13_full_year_calendar/confirmed_hours_calendar.png`*
 
 ### 3.2 Does detouring cost or save time?
 
@@ -145,7 +157,9 @@ This overall pattern hides one exception worth flagging up front, since Section 
 
 **Conclusion (part 2):** taking the detour is, on balance, the better choice on every affected line — but "on balance" is doing real work for line 97 specifically in the mid-afternoon.
 
-**Figure 7.** Median travel-time delta (detour minus baseline) by hour, all five affected lines. `docs/05_skip_comparison/delta_all_lines.png`
+**Figure 7. Detouring saves time on all five affected lines at almost every hour, except line 97's mid-afternoon detour, which briefly costs time instead.**
+Per-hour difference in median travel time (detour variant minus baseline variant), both directions pooled, for the five lines with a confirmed detour; fixed color order 17, 19, 22, 9, 97.
+*How to read: values below the dashed zero line mean the detour is faster than the normal route at that hour; line 97 is the only curve that rises above zero, between roughly 14:00 and 17:00. `docs/05_skip_comparison/delta_all_lines.png`*
 
 ### 3.3 Do closures ripple onto lines that don't run through Aza St.? — control lines 14 & 15
 
@@ -178,7 +192,9 @@ Figure 4 shows the hour-by-hour version of the same comparison. Both lines swing
 
 **Conclusion:** we do not find evidence that the Aza St. closures spill over onto lines that don't run through that corridor. Both the per-stratum tests and the more rigorous day/hour-stratified permutation test agree on this for both lines. For a rider deciding whether closures make lines 14 or 15 unreliable, the answer from this data is: no — travel time on those two lines during a blockade-affected window is statistically indistinguishable from a normal day at the same hour.
 
-**Figure 4.** Hourly travel-time delta (blockade window minus matched normal), lines 14 and 15, Saturday-only hours shaded. `docs/08_control_lines_15_14/control_lines_delta.png`
+**Figure 4. Control lines 14 and 15, which never enter the closed corridor, show no consistent slowdown during confirmed closure windows.**
+Per-hour difference in median travel time (confirmed blockade-window months minus matched-normal months at the same day-of-week/hour), lines 14 and 15, both directions pooled; grey bands mark Saturday-only hours.
+*How to read: values scatter above and below zero with no shared pattern between the two lines, consistent with the null result from the stratified permutation test (Δ ≈ −1.2 min for line 15, −0.4 min for line 14, both p > 0.9). `docs/08_control_lines_15_14/control_lines_delta.png`*
 
 ### 3.4 Lines 9 & 97: same area, different segment — reroute, delay, or both?
 
@@ -192,7 +208,9 @@ Figure 4 shows the hour-by-hour version of the same comparison. Both lines swing
 
 **Conclusion (part 3):** both lines reroute heavily during a closure rather than absorbing it in place — but only line 9 riders experience a confirmed, sizeable delay, and only on Saturdays. Line 97 riders are largely protected on time overall, except for a specific mid-afternoon window where their own detour becomes the slow option.
 
-**Figure 8.** Own detour cost vs. cost of staying on the baseline route during others' blockades, by hour, line 97. `docs/09_lines_9_97/line_97_blockade_delta.png`
+**Figure 8. Line 97 riders are rarely delayed by nearby closures — except when they catch its own mid-afternoon detour, which runs slower than staying on the normal route.**
+Two comparisons by hour of day: line 97's own detour vs. its own baseline route (red), and staying on line 97's baseline route during a confirmed 17/19/22 closure vs. a matched normal hour (blue).
+*How to read: positive values mean slower than usual; the red curve (own detour) only rises above zero in the mid-afternoon, while the blue curve (absorbing others' closures) stays close to zero throughout. `docs/09_lines_9_97/line_97_blockade_delta.png`*
 
 ### Bringing the four sub-questions together
 

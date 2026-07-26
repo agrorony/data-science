@@ -26,6 +26,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 
 from pipeline import config, stage4_route_variants, variant_merges as vm
+from pipeline import style  # noqa: F401
 from pipeline.stage10_route_deviation_heatmaps import build_group_heatmap, draw_group_heatmap, heatmap_row_height
 
 RAW_COUNT_THRESHOLD = 5

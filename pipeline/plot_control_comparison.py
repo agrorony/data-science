@@ -38,6 +38,7 @@ import pandas as pd
 from scipy import stats
 
 from pipeline import config, variant_merges as vm, pooled_analysis as pa, stats_tests as st
+from pipeline import style  # noqa: F401
 
 OUT_DIR = config.REPO_ROOT / "docs" / "08_control_lines_15_14"
 MIN_N_FOR_TEST = 3
@@ -187,7 +188,7 @@ def plot_combined_control_delta(results: dict[str, dict], out_path) -> None:
     ax.set_ylabel("Extra travel time in blockade window (min)")
     ax.set_title("Control Lines 14 & 15: Travel-Time Delta, Confirmed Blockade Window vs Matched Normal", fontsize=12, fontweight="bold")
     ax.legend(fontsize=9)
-    ax.grid(True, alpha=0.3)
+    ax.grid(True, alpha=0.3, axis="y")
 
     caption_parts = []
     for label, r in results.items():
@@ -220,7 +221,7 @@ def run() -> None:
     print(f"Blockade windows (new rule, lines 17/19/22 pooled): {len(windows)} distinct slots "
           f"({(windows['category'] == 'Saturday').sum()} Saturday, {(windows['category'] == 'Weekday').sum()} Weekday)")
 
-    targets = [("Line 15", 15), ("Line 14", 14)]
+    targets = [("Line 14", 14), ("Line 15", 15)]  # fixed line order (pipeline.style.LINE_ORDER)
 
     stats_rows: list[dict] = []
     results: dict[str, dict] = {}

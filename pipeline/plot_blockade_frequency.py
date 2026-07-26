@@ -31,6 +31,7 @@ import numpy as np
 import pandas as pd
 
 from pipeline import config, variant_merges as vm, pooled_analysis as pa, stats_tests as st
+from pipeline import style  # noqa: F401
 
 PROTEST_LINES = [9, 17, 19, 22, 97]
 
@@ -88,7 +89,7 @@ def draw_panel(ax, pivot: pd.DataFrame, n_pivot: pd.DataFrame, title: str, fig, 
     return im
 
 
-LINE_GRID_ORDER = [9, 14, 15, 17, 19, 22, 97]
+LINE_GRID_ORDER = style.LINE_ORDER  # fixed order: 17, 19, 22, 9, 97, 14, 15
 OUT_DIR = config.REPO_ROOT / "docs" / "06_blockade_frequency"
 
 

@@ -48,6 +48,7 @@ import pandas as pd
 from scipy import stats
 
 from pipeline import config, variant_merges as vm, pooled_analysis as pa, stats_tests as st
+from pipeline import style  # noqa: F401
 from pipeline import plot_baseline_vs_blocked_delta as pbd
 
 OUT_DIR = config.REPO_ROOT / "docs" / "09_lines_9_97"
@@ -396,7 +397,7 @@ def plot_own_vs_absorbed_delta(line_label: str, route_name: int, effective_df: p
     ax.set_ylabel("Extra travel time (min)")
     ax.set_title(f"{line_label}: Own Detour vs. Staying on Route During Others' Blockades", fontsize=12, fontweight="bold")
     ax.legend(fontsize=8, loc="upper left", bbox_to_anchor=(1.02, 1), borderaxespad=0)
-    ax.grid(True, alpha=0.3)
+    ax.grid(True, alpha=0.3, axis="y")
 
     n_own_blocked, n_own_baseline = len(blocked_ep), len(baseline_ep)
     own_overall_delta = (
