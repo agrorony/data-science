@@ -30,6 +30,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 
 from pipeline import config, variant_merges as vm, pooled_analysis as pa, stats_tests as st
+from pipeline import style  # noqa: F401
 
 OUT_DIR = config.REPO_ROOT / "docs" / "05_skip_comparison"
 THIN_THRESHOLD = 8  # fewer than this many blocked blocks at an hour -> shaded as thin
@@ -168,7 +169,7 @@ def plot_all_lines_delta(line_deltas: dict[int, pd.Series], out_path) -> None:
         fontsize=12, fontweight="bold",
     )
     ax.legend(fontsize=9, title="Line")
-    ax.grid(True, alpha=0.3)
+    ax.grid(True, alpha=0.3, axis="y")
 
     fig.text(
         0.5, -0.05,

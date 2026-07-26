@@ -42,6 +42,14 @@ def rtl(text: str) -> str:
     return text[::-1] if is_hebrew(text) else text
 
 
+# "Noto Sans Hebrew" is not installed in this environment (checked via
+# matplotlib.font_manager); "David" is the best available Hebrew-capable
+# fallback on this machine and renders the ASCII "Unknown(<code>)" labels
+# fine too.
+HEBREW_FONT = "David"
+DENSE_LABEL_THRESHOLD = 15  # above this many stops, rotate 90 deg instead of 45
+
+
 def build_group_heatmap(display_sub: pd.DataFrame, stop_code_to_name: dict[int, str]):
     display_sub = display_sub.sort_values(["is_reference", "count"], ascending=[False, False])
 
@@ -80,7 +88,12 @@ def draw_group_heatmap(ax, heatmap_data, labels_y, station_labels, title) -> Non
         xticklabels=columns, yticklabels=labels_y,
         linecolor="lightgrey", linewidths=0.3, ax=ax,
     )
-    ax.set_xticklabels(ax.get_xticklabels(), rotation=45, ha="right", fontsize=7)
+    dense = len(columns) > DENSE_LABEL_THRESHOLD
+    rotation = 90 if dense else 45
+    ax.set_xticklabels(
+        ax.get_xticklabels(), rotation=rotation, ha="center" if dense else "right",
+        fontsize=7, fontfamily=HEBREW_FONT,
+    )
     ax.set_yticklabels(ax.get_yticklabels(), fontsize=8)
     ax.set_title(title)
     ax.set_xlabel("Stations (longest observed route order)")

@@ -38,6 +38,7 @@ import numpy as np
 import pandas as pd
 
 from pipeline import config, variant_merges as vm
+from pipeline import style  # noqa: F401
 from pipeline.analyze_deep_dive_windows import (
     DAY_LABELS, MONTH_LABELS, BLOCK_KEYS, load_data, build_footprints, MIN_N_RELIABLE,
 )

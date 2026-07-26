@@ -23,6 +23,7 @@ import sys
 
 from pipeline import (
     config,
+    style,  # noqa: F401
     stage0_rebuild_merged,
     stage1_validate_coverage,
     stage2_rename_and_tag,

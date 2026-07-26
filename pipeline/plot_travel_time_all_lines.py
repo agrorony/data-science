@@ -27,6 +27,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 
 from pipeline import config, variant_merges as vm, pooled_analysis as pa
+from pipeline import style  # noqa: F401
 
 OUT_DIR = config.REPO_ROOT / "docs" / "04_baselines"
 OUTPUT_PATH = OUT_DIR / "travel_time_all_lines.png"
@@ -84,7 +85,8 @@ def plot_by_hour(baseline: pd.DataFrame) -> None:
     by_hour = grouped.agg(mean="mean", sem=sem, n="count").reset_index()
 
     fig, ax = plt.subplots(figsize=(11, 6.5))
-    for line in sorted(by_hour["route_name"].unique()):
+    present = set(by_hour["route_name"].unique())
+    for line in [l for l in style.LINE_ORDER if l in present]:
         sub = by_hour[by_hour["route_name"] == line].sort_values("scheduled_departure_time")
         color = config.LINE_COLORS[int(line)]
         ax.plot(sub["scheduled_departure_time"], sub["mean"], color=color, linewidth=2, marker="o", markersize=3.5, label=f"Line {int(line)}")
@@ -94,7 +96,7 @@ def plot_by_hour(baseline: pd.DataFrame) -> None:
     ax.set_ylabel("Mean end-to-end travel time (min)\nbaseline variant, both directions pooled")
     ax.set_title("Baseline Travel Time by Departure Hour, All Lines")
     ax.legend(fontsize=9, title="Line", ncol=2)
-    ax.grid(alpha=0.3)
+    ax.grid(alpha=0.3, axis="y")
 
     fig.text(
         0.5, -0.05,
