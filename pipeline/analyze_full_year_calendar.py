@@ -197,6 +197,318 @@ def find_flagged_cells(long_df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
+def slot_purity_global_check(blocks: pd.DataFrame) -> pd.DataFrame:
+    """Global re-verification of the variant-purity claim (a slot = (line,
+    direction, month, day, hour), ignoring route_variant_id): how many
+    blocked-containing slots mix a blocked and a reference variant. This
+    project's own docs/11 deep dive didn't need this check; the number
+    cited in the prompt ("905 slots, 1 mixed") could not be located
+    anywhere in this repo, so it is recomputed here from scratch against
+    the current (post fix_22b_central_prompt.md) effective classification
+    rather than assumed -- the qualitative finding (purity is
+    near-universal) holds regardless of the exact denominator."""
+    slot_keys = ["route_name", "direction_group", "month", "day_of_week", "scheduled_departure_time"]
+    g = blocks.groupby(slot_keys)
+    n_variants = g["route_variant_id"].nunique()
+    has_blocked = g.apply(lambda d: (d["variant_type_v2"] == "blocked").any())
+    has_reference = g.apply(lambda d: (d["variant_type_v2"] == "reference").any())
+    mixed = (n_variants > 1) & has_blocked & has_reference
+    result = pd.DataFrame([{
+        "n_slots_total": len(n_variants),
+        "n_blocked_containing_slots": int(has_blocked.sum()),
+        "n_mixed_blocked_reference_slots": int(mixed.sum()),
+    }])
+    print("\n=== Global slot-purity re-verification ===")
+    print(result.to_string(index=False))
+    if mixed.sum():
+        print("Mixed slot(s):", list(n_variants[mixed].index))
+    return result, mixed[mixed].index.tolist()
+
+
+def line_confirmed_at_hour(cell_blocks: pd.DataFrame, line: int, hour: int) -> tuple[bool, dict]:
+    """Does `line` have a confirmed-blocked slot at this hour (pure + n>=8 +
+    variant_type_v2=='blocked')? For line 22, only direction_A counts
+    (config.LINE_22_SHARE_DIRECTION) -- direction_B can never be blocked
+    post-fix, but is excluded from agreement-counting for the same
+    denominator-dilution reason as Part A's share computation."""
+    directions = [config.LINE_22_SHARE_DIRECTION] if line == 22 else ["direction_A", "direction_B"]
+    detail = {}
+    confirmed = False
+    for direction in directions:
+        sub = cell_blocks[
+            (cell_blocks["route_name"] == line) & (cell_blocks["direction_group"] == direction)
+            & (cell_blocks["scheduled_departure_time"] == hour)
+        ]
+        if sub.empty:
+            continue
+        n_variants = sub["route_variant_id"].nunique()
+        pure = n_variants == 1
+        vt = sub["variant_type_v2"].iloc[0] if pure else "MIXED(" + "/".join(sorted(sub["variant_type_v2"].unique())) + ")"
+        n_obs = int(sub["n_observations"].sum())
+        detail[direction] = {"pure": pure, "variant_type_v2": vt, "n_observations": n_obs}
+        if pure and n_obs >= MIN_N_RELIABLE_CELL and sub["variant_type_v2"].iloc[0] == "blocked":
+            confirmed = True
+    return confirmed, detail
+
+
+def nearest_reference_n(cell_line_dir_blocks: pd.DataFrame, hour: int) -> tuple[int | None, int | None]:
+    """Nearest hour (by |distance|, ties broken toward the earlier hour)
+    running the reference variant for this (line, direction, month, day) --
+    returns (reference_hour, its n_observations) or (None, None)."""
+    ref = cell_line_dir_blocks[cell_line_dir_blocks["variant_type_v2"] == "reference"].copy()
+    if ref.empty:
+        return None, None
+    ref["dist"] = (ref["scheduled_departure_time"] - hour).abs()
+    ref = ref.sort_values(["dist", "scheduled_departure_time"])
+    row = ref.iloc[0]
+    return int(row["scheduled_departure_time"]), int(row["n_observations"])
+
+
+VT_CODE_13 = {"reference": 1, "regular": 2, "blocked": 3, "non_corridor": 2, "noise": 2}
+VT_COLORS_13 = {"no_service": "#eeeeee", "reference": "#4C72B0", "regular": "#f4a261", "blocked": "#d62728"}
+
+
+def plot_cell_timeline(cell_blocks: pd.DataFrame, lines: list[int], title: str, out_path, confirmed_hours: set[int]):
+    row_keys = []
+    for line in lines:
+        for direction in ["direction_A", "direction_B"]:
+            if ((cell_blocks["route_name"] == line) & (cell_blocks["direction_group"] == direction)).any():
+                row_keys.append((line, direction))
+    hours = sorted(cell_blocks["scheduled_departure_time"].unique())
+    if not row_keys or not hours:
+        return
+
+    grid = np.zeros((len(row_keys), len(hours)))
+    n_grid = np.zeros((len(row_keys), len(hours)))
+    impure_grid = np.zeros((len(row_keys), len(hours)), dtype=bool)
+    for ri, (line, direction) in enumerate(row_keys):
+        sub = cell_blocks[(cell_blocks["route_name"] == line) & (cell_blocks["direction_group"] == direction)]
+        for ci, h in enumerate(hours):
+            s = sub[sub["scheduled_departure_time"] == h]
+            if s.empty:
+                continue
+            pure = s["route_variant_id"].nunique() == 1
+            impure_grid[ri, ci] = not pure
+            vt = s["variant_type_v2"].iloc[0] if pure else "regular"
+            grid[ri, ci] = VT_CODE_13.get(vt, 2)
+            n_grid[ri, ci] = s["n_observations"].sum()
+
+    cmap = ListedColormap([VT_COLORS_13["no_service"], VT_COLORS_13["reference"], VT_COLORS_13["regular"], VT_COLORS_13["blocked"]])
+    fig, ax = plt.subplots(figsize=(max(9, 0.55 * len(hours)), 0.6 * len(row_keys) + 2.2))
+    ax.imshow(grid, cmap=cmap, vmin=0, vmax=3, aspect="auto")
+    ax.set_xticks(range(len(hours)))
+    ax.set_xticklabels([f"{h}:00" for h in hours], fontsize=8, rotation=45)
+    for h, ci in zip(hours, range(len(hours))):
+        if h in confirmed_hours:
+            ax.axvspan(ci - 0.5, ci + 0.5, facecolor="none", edgecolor="black", linewidth=2.2, zorder=5)
+    row_labels = [f"Line {l} ({d[-1]})" + (" [excl. from agreement]" if l == 22 and d == "direction_B" else "") for l, d in row_keys]
+    ax.set_yticks(range(len(row_keys)))
+    ax.set_yticklabels(row_labels, fontsize=8)
+    for (l, d), tick in zip(row_keys, ax.get_yticklabels()):
+        tick.set_color(config.LINE_COLORS.get(l, "black"))
+        tick.set_fontweight("bold")
+    for ri in range(len(row_keys)):
+        for ci in range(len(hours)):
+            n = n_grid[ri, ci]
+            if n <= 0:
+                continue
+            label = ("IMPURE" if impure_grid[ri, ci] else f"n={int(n)}") + ("*" if 0 < n < MIN_N_RELIABLE else "")
+            txt_color = "black" if grid[ri, ci] in (0, 2) else "white"
+            ax.text(ci, ri, label, ha="center", va="center", fontsize=6, color=txt_color)
+    ax.set_title(title, fontsize=12, fontweight="bold")
+    legend = [
+        Patch(color=VT_COLORS_13["reference"], label="Reference variant"),
+        Patch(color=VT_COLORS_13["regular"], label="Regular / non_corridor / impure slot"),
+        Patch(color=VT_COLORS_13["blocked"], label="Blocked (>15-stop) variant"),
+        Patch(facecolor="none", edgecolor="black", linewidth=2.2, label="Confirmed hour (>=3 lines agree)"),
+    ]
+    fig.legend(handles=legend, loc="lower center", ncol=2, fontsize=8, bbox_to_anchor=(0.5, -0.1))
+    fig.text(
+        0.5, -0.17,
+        "How to read: black outline = hour confirmed by >=3 elevated lines independently (pure slot, n>=8, blocked); "
+        "'IMPURE' = more than one route_variant_id in that exact slot (never counted as confirmed); "
+        "n=block sample size, '*' marks n<8. Line 22 direction_B is shown but excluded from agreement-counting "
+        "(non_corridor, see pipeline/config.py:LINE_22_SHARE_DIRECTION).",
+        ha="center", fontsize=7.5, wrap=True, transform=fig.transFigure,
+    )
+    fig.tight_layout()
+    fig.savefig(out_path, dpi=115, bbox_inches="tight")
+    plt.close(fig)
+    print(f"Saved -> {out_path}")
+
+
+def confirmed_hour_ranges(hours: list[int]) -> list[str]:
+    if not hours:
+        return []
+    hours = sorted(hours)
+    ranges = []
+    start = prev = hours[0]
+    for h in hours[1:]:
+        if h == prev + 1:
+            prev = h
+            continue
+        ranges.append((start, prev))
+        start = prev = h
+    ranges.append((start, prev))
+    return [f"{a}-{b+1}h" if a != b else f"{a}h" for a, b in ranges]
+
+
+def part_b(effective_df, effective_summary, variant_summary, blocks, flagged):
+    # Footprints are not redefined here -- reused verbatim from phase 11
+    # (pipeline.analyze_deep_dive_windows.build_footprints), per the task
+    # brief ("do not redefine a new footprint if an existing one already
+    # covers the relevant stops"). Not otherwise used in the confirmed-hour
+    # logic below (that logic only needs variant_type_v2 + purity), but
+    # printed here for the record / cross-reference in the README.
+    footprints, footprint_records = build_footprints(effective_df, effective_summary, variant_summary)
+    print("\n=== Footprints reused from phase 11 ===")
+    for name, stops in footprints.items():
+        print(f"{name}: {len(stops)} stops -> {sorted(stops)}")
+
+    purity_result, mixed_slots = slot_purity_global_check(blocks)
+
+    calendar_rows = []
+    anomaly_rows = []
+
+    for _, cell_row in flagged.iterrows():
+        month, day_label = cell_row["month"], cell_row["day_label"]
+        lines = cell_row["lines_elevated_list"]
+        key = f"{MONTH_LABELS[month-1].lower()}_{day_label.lower()}"
+        print(f"\n\n========== FLAGGED CELL: {MONTH_LABELS[month-1]} {day_label} (lines: {lines}) ==========")
+
+        cell_blocks = blocks[
+            (blocks["month"] == month) & (blocks["day_label"] == day_label) & (blocks["route_name"].isin(lines))
+        ].copy()
+
+        hours = sorted(cell_blocks["scheduled_departure_time"].unique())
+        confirmed_hours = []
+        n_impure_candidates = 0
+        n_lown_candidates = 0
+        for h in hours:
+            agree = 0
+            for line in lines:
+                confirmed, detail = line_confirmed_at_hour(cell_blocks, line, h)
+                if confirmed:
+                    agree += 1
+                else:
+                    for direction, d in detail.items():
+                        if d["variant_type_v2"] == "blocked" and not d["pure"]:
+                            n_impure_candidates += 1
+                        elif d["variant_type_v2"] == "blocked" and d["n_observations"] < MIN_N_RELIABLE_CELL:
+                            n_lown_candidates += 1
+            if agree >= MIN_LINES_AGREEING:
+                confirmed_hours.append(h)
+
+        ranges = confirmed_hour_ranges(confirmed_hours)
+        status = "confirmed" if ranges else "inconclusive"
+        print(f"  Confirmed hours: {ranges if ranges else 'none'} (impure-blocked candidates seen: {n_impure_candidates}, low-n-blocked candidates seen: {n_lown_candidates})")
+
+        # n-anomaly check for each line/direction contributing to a confirmed hour
+        for h in confirmed_hours:
+            for line in lines:
+                directions = [config.LINE_22_SHARE_DIRECTION] if line == 22 else ["direction_A", "direction_B"]
+                for direction in directions:
+                    ld = cell_blocks[(cell_blocks["route_name"] == line) & (cell_blocks["direction_group"] == direction)]
+                    slot = ld[ld["scheduled_departure_time"] == h]
+                    if slot.empty or slot["route_variant_id"].nunique() != 1 or slot["variant_type_v2"].iloc[0] != "blocked":
+                        continue
+                    if slot["n_observations"].iloc[0] < MIN_N_RELIABLE_CELL:
+                        continue
+                    ref_hour, ref_n = nearest_reference_n(ld, h)
+                    if ref_n is None or ref_n == 0:
+                        continue
+                    blocked_n = int(slot["n_observations"].iloc[0])
+                    ratio = blocked_n / ref_n
+                    if ratio >= 2 or ratio <= 0.5:
+                        anomaly_rows.append({
+                            "month_label": MONTH_LABELS[month - 1], "day_label": day_label,
+                            "line": line, "direction": direction, "blocked_hour": h, "blocked_n": blocked_n,
+                            "nearest_reference_hour": ref_hour, "reference_n": ref_n, "ratio": round(ratio, 2),
+                        })
+
+        plot_cell_timeline(
+            cell_blocks, lines,
+            f"{MONTH_LABELS[month-1]}, {day_label} -- Hour-Level Variant Type (flagged cell, relaxed rule)",
+            OUT_DIR / f"timeline_{key}.png", set(confirmed_hours),
+        )
+
+        calendar_rows.append({
+            "month": month, "month_label": MONTH_LABELS[month - 1], "day_label": day_label,
+            "lines_elevated": lines, "status": status,
+            "confirmed_hour_ranges": "; ".join(ranges) if ranges else "",
+            "documented_elsewhere": cell_row["documented_elsewhere"],
+            "documented_reason": cell_row["documented_reason"],
+            "n_impure_blocked_candidates": n_impure_candidates,
+            "n_lowN_blocked_candidates": n_lown_candidates,
+        })
+
+    calendar_df = pd.DataFrame(calendar_rows)
+    calendar_df.to_csv(OUT_DIR / "confirmed_hours.csv", index=False)
+    print("\n\n=== CALENDAR SUMMARY ===")
+    print(calendar_df[["month_label", "day_label", "status", "confirmed_hour_ranges", "documented_elsewhere"]].to_string(index=False))
+
+    anomaly_df = pd.DataFrame(anomaly_rows)
+    anomaly_df.to_csv(OUT_DIR / "n_anomaly_report.csv", index=False)
+    print(f"\n=== N-ANOMALY REPORT ({len(anomaly_df)} cases, ratio>=2x or <=0.5x) ===")
+    if len(anomaly_df):
+        print(anomaly_df.to_string(index=False))
+    else:
+        print("(none)")
+
+    return calendar_df, anomaly_df
+
+
+def plot_calendar_grid(calendar_df: pd.DataFrame, long_df: pd.DataFrame, out_path):
+    """Month x day-of-week grid, one cell per (month, day). Confirmed cells
+    show their hour range; flagged-but-inconclusive cells show a one-word
+    reason; unflagged cells are blank. This -- not a percentage heatmap --
+    is the deliverable: a plain "was there a confirmed blockage, and when"
+    answer per cell."""
+    grid_status = pd.DataFrame("", index=DAY_ORDER, columns=MONTH_ORDER)
+    grid_color = np.zeros((len(DAY_ORDER), len(MONTH_ORDER)))  # 0=not flagged, 1=inconclusive, 2=confirmed
+
+    for _, row in calendar_df.iterrows():
+        day_idx = DAY_ORDER.index(row["day_label"])
+        month_idx = row["month"] - 1
+        if row["status"] == "confirmed":
+            grid_status.iloc[day_idx, month_idx] = row["confirmed_hour_ranges"].split(";")[0].strip()
+            grid_color[day_idx, month_idx] = 2
+        else:
+            reason = "artifact" if row["documented_elsewhere"] and "docs/06" in row["documented_reason"] else (
+                "low n" if row["n_lowN_blocked_candidates"] >= row["n_impure_blocked_candidates"] else "impure"
+            )
+            grid_status.iloc[day_idx, month_idx] = f"inc.\n({reason})"
+            grid_color[day_idx, month_idx] = 1
+
+    cmap = ListedColormap(["#f7f7f7", "#fddbc7", "#d62728"])
+    fig, ax = plt.subplots(figsize=(13, 5))
+    ax.imshow(grid_color, cmap=cmap, vmin=0, vmax=2, aspect="auto")
+    ax.set_xticks(range(len(MONTH_ORDER)))
+    ax.set_xticklabels(MONTH_LABELS)
+    ax.set_yticks(range(len(DAY_ORDER)))
+    ax.set_yticklabels(DAY_ORDER)
+    for i in range(len(DAY_ORDER)):
+        for j in range(len(MONTH_ORDER)):
+            txt = grid_status.iloc[i, j]
+            if txt:
+                ax.text(j, i, txt, ha="center", va="center", fontsize=7.5,
+                        color="white" if grid_color[i, j] == 2 else "black")
+    ax.set_title(
+        "Phase 13 -- Confirmed-Hours Calendar (relaxed scan: >=3 lines, share > 10%)",
+        fontsize=13, fontweight="bold",
+    )
+    legend = [
+        Patch(color="#d62728", label="Confirmed (>=3 lines agree, pure + n>=8)"),
+        Patch(color="#fddbc7", label="Flagged but inconclusive (reason in cell)"),
+        Patch(color="#f7f7f7", label="Not flagged (relaxed rule not met)"),
+    ]
+    fig.legend(handles=legend, loc="lower center", ncol=3, fontsize=9, bbox_to_anchor=(0.5, -0.05))
+    fig.tight_layout()
+    fig.savefig(out_path, dpi=120, bbox_inches="tight")
+    plt.close(fig)
+    print(f"Saved -> {out_path}")
+
+
 def part_a():
     effective_df, effective_summary, variant_summary = load_data()
     blocks = block_table(effective_df)
